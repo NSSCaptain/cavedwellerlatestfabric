@@ -1,0 +1,30 @@
+{
+	"schemaVersion": 1,
+	"id": "cavenoise",
+	"version": "${version}",
+	"name": "CaveDwellerLatestFabric",
+	"description": "Adds a horrifying monster, and some extra cave sounds. Now for Fabric 1.20.1! Port by The Captain!",
+	"authors": [
+		"Gargin",
+		"The Captain"
+	],
+	"license": "CC0-1.0",
+	"icon": "assets/cavenoise/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"com.gargin.cavenoise.CaveNoise"
+		],
+		"client": [
+			"com.gargin.cavenoise.CaveNoiseClient"
+		]
+	},
+	"mixins": [
+	],
+	"depends": {
+		"fabricloader": ">=0.19.3",
+		"minecraft": "~1.20.1",
+		"java": ">=17",
+		"fabric-api": "*"
+	}
+}
