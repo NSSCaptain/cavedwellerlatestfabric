@@ -10,16 +10,17 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
 
 public class ModEntities {
+   /*
     public static final String MOD_ID = "cavedweller";
 
     public static final EntityType<CaveDwellerEntity> CAVE_DWELLER = Registry.register(
             BuiltInRegistries.ENTITY_TYPE,
             new ResourceLocation(MOD_ID, "cave_dweller"),
             FabricEntityTypeBuilder.<CaveDwellerEntity>create(MobCategory.MONSTER, CaveDwellerEntity::new)
-                    .dimensions(EntityDimensions.scalable(0.6F, 2.9F))
+                    .dimensions(EntityDimensions.scalable(0.8F, 3.2F))
                     .build()
     );
-
+    */
     public static void registerModEntities() {
     }
 }

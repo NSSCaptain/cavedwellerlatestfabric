@@ -9,7 +9,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.EntitySelector;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -22,6 +21,7 @@ import net.minecraft.world.level.pathfinder.Node;
 import net.minecraft.world.level.pathfinder.Path;
 import net.minecraft.world.phys.Vec2;
 import net.minecraft.world.phys.Vec3;
+import org.jetbrains.annotations.Nullable;
 
 public class DwellerChaseGoal extends Goal {
     protected final PathfinderMob mob;
@@ -80,6 +80,7 @@ public class DwellerChaseGoal extends Goal {
     int torchDestructionRadius = 1;
     BlockPos checkBlockForTorch;
     boolean isStartSqueezingOrSqueezingTickRunning = false;
+    private Player target;
 
     public DwellerChaseGoal(PathfinderMob pMob, CaveDwellerEntity pCaveDweller, double pSpeedModifier, boolean pFollowingTargetEvenIfNotSeen, float pTicksTillChase) {
         this.mob = pMob;
@@ -96,6 +97,8 @@ public class DwellerChaseGoal extends Goal {
         this.currentTicksTillLeave = this.ticksTillLeave;
     }
 
+    public void setTarget(@Nullable Player target) { this.target = target; }
+
     @Override
     public boolean canUse() {
         if (this.cavedweller.isRemoved() || this.cavedweller.isDeadOrDying()) {
@@ -106,10 +109,11 @@ public class DwellerChaseGoal extends Goal {
                 return false;
             } else {
                 this.lastCanUseCheck = i;
+                this.setTarget(this.cavedweller.level().getNearestPlayer(this.cavedweller, 200.0D));
                 LivingEntity livingentity = this.mob.getTarget();
                 if (livingentity == null) {
                     return false;
-                } else if (!livingentity.isAttackable()) {
+                } else if (!livingentity.isAttackable() || this.target.isSpectator() || this.target.isCreative()) {
                     return false;
                 } else if (this.canPenalize) {
                     if (--this.ticksUntilNextPathRecalculation <= 0) {

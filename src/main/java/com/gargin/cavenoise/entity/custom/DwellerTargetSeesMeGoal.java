@@ -88,7 +88,7 @@ public class DwellerTargetSeesMeGoal extends NearestAttackableTargetGoal<Player>
             this.setPendingTarget(this.cavedweller.level().getNearestPlayer(this.cavedweller, 200.0D));
             if (this.pendingTarget == null) {
                 return false;
-            } else if (this.pendingTarget.isSpectator()) {
+            } else if (this.pendingTarget.isSpectator() || this.pendingTarget.isCreative()) {
                 return false;
             } else {
                 return this.inPlayerLineOfSight() && this.isPlayerLookingTowards();
@@ -114,7 +114,7 @@ public class DwellerTargetSeesMeGoal extends NearestAttackableTargetGoal<Player>
 
     @Override
     public boolean canContinueToUse() {
-        if (this.pendingTarget.isSpectator()) {
+        if (this.pendingTarget.isSpectator() || this.pendingTarget.isCreative()) {
             return false;
         } else {
             return this.pendingTarget != null;

@@ -8,12 +8,12 @@ import net.minecraft.world.entity.player.Player;
 public class DwellerTargetTooCloseGoal extends NearestAttackableTargetGoal<Player> {
     private Player pendingTarget;
     private CaveDwellerEntity cavedweller;
-    private float distanceThreshold;
+    private float BlockDistanceThreshold;
 
-    public DwellerTargetTooCloseGoal(CaveDwellerEntity pCaveDweller, float pDistanceThreshold) {
+    public DwellerTargetTooCloseGoal(CaveDwellerEntity pCaveDweller, float pBlockDistanceThreshold) {
         super(pCaveDweller, Player.class, false);
         this.cavedweller = pCaveDweller;
-        this.distanceThreshold = pDistanceThreshold;
+        this.BlockDistanceThreshold = pBlockDistanceThreshold;
     }
 
     public void setPendingTarget(@Nullable Player pendingTarget) {
@@ -29,11 +29,11 @@ public class DwellerTargetTooCloseGoal extends NearestAttackableTargetGoal<Playe
         if (this.cavedweller.isRemoved()) {
             return false;
         } else {
-            this.setPendingTarget(this.cavedweller.level().getNearestPlayer(this.cavedweller, (double)this.distanceThreshold));
+            this.setPendingTarget(this.cavedweller.level().getNearestPlayer(this.cavedweller, (double)this.BlockDistanceThreshold));
             if (this.pendingTarget == null) {
                 return false;
             } else {
-                return this.pendingTarget.isSpectator() ? false : this.inPlayerLineOfSight();
+                return this.pendingTarget.isSpectator() || this.pendingTarget.isCreative() ? false : this.inPlayerLineOfSight();
             }
         }
     }
@@ -41,7 +41,6 @@ public class DwellerTargetTooCloseGoal extends NearestAttackableTargetGoal<Playe
     @Override
     public void start() {
         SynchedEntityData var10000 = this.cavedweller.getEntityData();
-        CaveDwellerEntity var10001 = this.cavedweller;
         var10000.set(CaveDwellerEntity.AGGRO_ACCESSOR, true);
         this.cavedweller.isAggro = true;
         this.cavedweller.rRollResult = 0;

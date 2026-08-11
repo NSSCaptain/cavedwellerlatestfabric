@@ -4,6 +4,7 @@ import java.util.Random;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.goal.Goal;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.pathfinder.Node;
 import net.minecraft.world.level.pathfinder.Path;
 
@@ -24,13 +25,17 @@ public class DwellerStalkGoal extends Goal {
     private boolean followingTargetEvenIfNotSeen = true;
     private boolean canPenalize = true;
     private float distanceForAggro = 15.0F;
-    private LivingEntity stalkingTarget;
+    private Player stalkingTarget;
     Random rand = new Random();
 
     public DwellerStalkGoal(CaveDwellerEntity pCaveDweller, double pSpeedModifier, float pDistanceForAggro) {
         this.distanceForAggro = pDistanceForAggro;
         this.cavedweller = pCaveDweller;
         this.speedModifier = pSpeedModifier;
+    }
+
+    private Player getTargetToStalk() {
+        return this.cavedweller.level().getNearestPlayer(this.cavedweller, 200.0D);
     }
 
     @Override
@@ -41,10 +46,10 @@ public class DwellerStalkGoal extends Goal {
             if (this.cavedweller.getTarget() == null) {
                 this.stalkingTarget = this.getTargetToStalk();
             } else {
-                this.stalkingTarget = this.cavedweller.getTarget();
+                this.stalkingTarget = this.getTargetToStalk();
             }
 
-            if (this.stalkingTarget == null) {
+            if (this.stalkingTarget == null || this.stalkingTarget.isSpectator() || this.stalkingTarget.isCreative()) {
                 return false;
             } else {
                 return this.cavedweller.rRollResult == 3 || this.cavedweller.forcedStalk;
@@ -87,11 +92,6 @@ public class DwellerStalkGoal extends Goal {
         this.cavedweller.getNavigation().stop();
         super.stop();
     }
-
-    private LivingEntity getTargetToStalk() {
-        return this.cavedweller.level().getNearestPlayer(this.cavedweller, 200.0D);
-    }
-
     @Override
     public void tick() {
         this.switchToAggroIfPlayerInRange();

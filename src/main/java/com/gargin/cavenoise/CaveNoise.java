@@ -184,12 +184,16 @@ public class CaveNoise implements ModInitializer {
         float vol = this.creepyCaveNoiseMinVol + (this.creepyCaveNoiseMaxVol - this.creepyCaveNoiseMinVol) * b;
         Random rand = new Random();
         if (this.checkIfPlayerIsSpelunker(player) && !player.isSpectator() && !player.isCreative()) {
-            SoundEvent selectedSound = switch (rand.nextInt(4)) {
+            SoundEvent selectedSound = switch (rand.nextInt(9)) {
                 case 0 -> (SoundEvent) ModSounds.CAVENOISE_1.get();
                 case 1 -> (SoundEvent) ModSounds.CAVENOISE_2.get();
                 case 2 -> (SoundEvent) ModSounds.CAVENOISE_3.get();
                 case 3 -> (SoundEvent) ModSounds.CAVENOISE_4.get();
-                default -> (SoundEvent) ModSounds.CAVENOISE_4.get();
+                case 4 -> (SoundEvent) ModSounds.CAVENOISE_5.get();
+                case 5 -> (SoundEvent) ModSounds.CAVENOISE_6.get();
+                case 6 -> (SoundEvent) ModSounds.CAVENOISE_7.get();
+                case 7 -> (SoundEvent) ModSounds.CAVENOISE_8.get();
+                default -> (SoundEvent) ModSounds.CAVENOISE_9.get();
             };
             player.connection.send(new net.minecraft.network.protocol.game.ClientboundSoundPacket(
                     net.minecraft.core.registries.BuiltInRegistries.SOUND_EVENT.wrapAsHolder(selectedSound),
@@ -250,7 +254,6 @@ public class CaveNoise implements ModInitializer {
                 case 1 -> (SoundEvent) ModSounds.DWELLER_STALK_2.get();
                 case 2 -> (SoundEvent) ModSounds.DWELLER_STALK_3.get();
                 case 3 -> (SoundEvent) ModSounds.DWELLER_STALK_4.get();
-                case 4 -> (SoundEvent) ModSounds.DWELLER_STALK_5.get();
                 default -> (SoundEvent) ModSounds.DWELLER_STALK_5.get();
             };
             player.connection.send(new net.minecraft.network.protocol.game.ClientboundSoundPacket(

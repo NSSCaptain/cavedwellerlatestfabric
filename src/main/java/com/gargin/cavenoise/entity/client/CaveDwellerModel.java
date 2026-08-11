@@ -31,7 +31,7 @@ public class CaveDwellerModel extends GeoModel<CaveDwellerEntity> {
     public void setCustomAnimations(CaveDwellerEntity animatable, long instanceId, AnimationState<CaveDwellerEntity> animationState) {
         CoreGeoBone head = this.getAnimationProcessor().getBone("head");
         if (head != null) {
-            EntityModelData entityData = (EntityModelData)animationState.getData(DataTickets.ENTITY_MODEL_DATA);
+            EntityModelData entityData = animationState.getData(DataTickets.ENTITY_MODEL_DATA);
             head.setRotX(entityData.headPitch() * ((float)Math.PI / 180F));
             head.setRotY(entityData.netHeadYaw() * ((float)Math.PI / 180F));
         }
