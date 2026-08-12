@@ -9,6 +9,11 @@ import software.bernie.geckolib.model.GeoModel;
 import software.bernie.geckolib.model.data.EntityModelData;
 
 public class CaveDwellerModel extends GeoModel<CaveDwellerEntity> {
+
+    private float defaultJawY = Float.NaN;
+    private float defaultThroatY = Float.NaN;
+    private float defaultThroatScaleY = Float.NaN;
+
     public CaveDwellerModel() {
     }
 
@@ -31,9 +36,105 @@ public class CaveDwellerModel extends GeoModel<CaveDwellerEntity> {
     public void setCustomAnimations(CaveDwellerEntity animatable, long instanceId, AnimationState<CaveDwellerEntity> animationState) {
         CoreGeoBone head = this.getAnimationProcessor().getBone("head");
         if (head != null) {
-            EntityModelData entityData = animationState.getData(DataTickets.ENTITY_MODEL_DATA);
-            head.setRotX(entityData.headPitch() * ((float)Math.PI / 180F));
-            head.setRotY(entityData.netHeadYaw() * ((float)Math.PI / 180F));
+            // ONLY track the player if the mob is alive and NOT playing its death animation
+            if (animatable.deathTime == 0 && !animatable.isPlayingDeathAnimation()) {
+                EntityModelData entityData = animationState.getData(DataTickets.ENTITY_MODEL_DATA);
+                head.setRotX(entityData.headPitch() * ((float) Math.PI / 180F));
+                head.setRotY(entityData.netHeadYaw() * ((float) Math.PI / 180F));
+            }
+        }
+        CoreGeoBone jawBone = this.getAnimationProcessor().getBone("jaw");
+        if (jawBone != null) {
+            if (Float.isNaN(defaultJawY)) {
+                defaultJawY = jawBone.getPosY();
+            }
+
+            int currentTick = animatable.getJawAnimationTick();
+
+            if (currentTick >= 0) {
+                float dynamicSpeed = animatable.getJawSpeed();
+                float dynamicDistance = animatable.getJawDistance();
+                float dynamicHoldTime = animatable.getJawHoldTime();
+
+                float elapsedSeconds = currentTick / 20.0F;
+
+                float transitionDuration = 1.0F / dynamicSpeed;
+                float closeStartTime = transitionDuration + dynamicHoldTime;
+                float totalDuration = closeStartTime + transitionDuration;
+
+                if (elapsedSeconds >= totalDuration) {
+                    animatable.resetJawAnimation();
+                    jawBone.setPosY(defaultJawY);
+                } else {
+                    float linearFactor = 0.0F;
+
+                    // 1. Calculate the raw linear progression (0.0 to 1.0)
+                    if (elapsedSeconds < transitionDuration) {
+                        // Phase A: Opening
+                        linearFactor = elapsedSeconds / transitionDuration;
+                    } else if (elapsedSeconds < closeStartTime) {
+                        // Phase B: Holding
+                        linearFactor = 1.0F;
+                    } else {
+                        // Phase C: Closing
+                        float closingElapsed = elapsedSeconds - closeStartTime;
+                        linearFactor = 1.0F - (closingElapsed / transitionDuration);
+                    }
+                    float smoothedFactor = (float) (1.0 - Math.cos(linearFactor * Math.PI)) / 2.0F;
+                    jawBone.setPosY(defaultJawY - (smoothedFactor * dynamicDistance));
+                }
+            } else {
+                jawBone.setPosY(defaultJawY);
+            }
+        }
+        CoreGeoBone throatBone = this.getAnimationProcessor().getBone("throat");
+        if (throatBone != null) {
+            // Cache the default Y scale on the first frame
+            if (Float.isNaN(defaultThroatScaleY)) {
+                defaultThroatScaleY = throatBone.getScaleY();
+            }
+
+            int currentTick = animatable.getJawAnimationTick();
+
+            if (currentTick >= 0) {
+                float dynamicSpeed = animatable.getJawSpeed();
+                float dynamicDistance = animatable.getJawDistance();
+                float dynamicHoldTime = animatable.getJawHoldTime();
+
+                float elapsedSeconds = currentTick / 20.0F;
+
+                float transitionDuration = 1.0F / dynamicSpeed;
+                float closeStartTime = transitionDuration + dynamicHoldTime;
+                float totalDuration = closeStartTime + transitionDuration;
+
+                if (elapsedSeconds >= totalDuration) {
+                    throatBone.setScaleY(defaultThroatScaleY);
+                } else {
+                    float linearFactor = 0.0F;
+
+                    if (elapsedSeconds < transitionDuration) {
+                        linearFactor = elapsedSeconds / transitionDuration;
+                    } else if (elapsedSeconds < closeStartTime) {
+                        linearFactor = 1.0F;
+                    } else {
+                        float closingElapsed = elapsedSeconds - closeStartTime;
+                        linearFactor = 1.0F - (closingElapsed / transitionDuration);
+                    }
+
+                    // Smooth curve matching the jaw speed
+                    float smoothedFactor = (float) (1.0 - Math.cos(linearFactor * Math.PI)) / 2.0F;
+
+                    // Scale multiplier: Adjust float according to size of "throat" texture
+                    float throatHeightInPixels = 4.0F;
+
+                    float throatHeight = 1.0F / throatHeightInPixels;
+                    float scaleIncrease = smoothedFactor * dynamicDistance * throatHeight;
+                    throatBone.setScaleY(defaultThroatScaleY + scaleIncrease);
+                }
+            } else {
+                // Return to default scale when jaw is closed
+                throatBone.setScaleY(defaultThroatScaleY);
+            }
         }
     }
 }

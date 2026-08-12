@@ -1,18 +1,57 @@
 package com.gargin.cavenoise.entity.client;
 
 import com.gargin.cavenoise.entity.custom.CaveDwellerEntity;
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
+import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import org.jetbrains.annotations.Nullable;
 import software.bernie.geckolib.cache.object.BakedGeoModel;
 import software.bernie.geckolib.renderer.GeoEntityRenderer;
+import software.bernie.geckolib.renderer.GeoRenderer;
+import software.bernie.geckolib.renderer.layer.GeoRenderLayer;
 
 public class CaveDwellerRenderer extends GeoEntityRenderer<CaveDwellerEntity> {
+
+    // Makes sure the death animation plays out and the dweller is fully transparent (invisible) before falling over and "poofing"
+    public static float timingOffset = 0.3F;
+
+    @Override
+    public boolean shouldShowName(CaveDwellerEntity entity) {
+        return false;
+    }
+
+    private static class RenderTypeAccessor extends RenderType {
+        private RenderTypeAccessor(String name, VertexFormat format, VertexFormat.Mode mode, int bufferSize, boolean affectsCrumbling, boolean sortOnUpload, Runnable setupState, Runnable clearState) {
+            super(name, format, mode, bufferSize, affectsCrumbling, sortOnUpload, setupState, clearState);
+        }
+
+        public static RenderType getCustomEmissiveTranslucent(ResourceLocation texture) {
+            CompositeState state = CompositeState.builder()
+                    .setShaderState(RENDERTYPE_EYES_SHADER)
+                    .setTextureState(new TextureStateShard(texture, false, false))
+                    .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
+                    .setLayeringState(VIEW_OFFSET_Z_LAYERING)
+                    .setCullState(NO_CULL)
+                    .setLightmapState(NO_LIGHTMAP)
+                    .setOverlayState(OVERLAY)
+                    .createCompositeState(true);
+
+            return create("cave_dweller_glowing_translucent_layer",
+                    DefaultVertexFormat.NEW_ENTITY,
+                    VertexFormat.Mode.QUADS,
+                    256,
+                    true,
+                    true,
+                    state);
+        }
+    }
 
     public CaveDwellerRenderer(EntityRendererProvider.Context renderManager) {
         super(renderManager, new CaveDwellerModel());
@@ -33,14 +72,6 @@ public class CaveDwellerRenderer extends GeoEntityRenderer<CaveDwellerEntity> {
         } else {
             poseStack.scale(1.3F, 1.3F, 1.3F);
         }
-
-        java.util.Optional<software.bernie.geckolib.cache.object.GeoBone> jawBoneOptional = this.getGeoModel().getBone("jaw");
-        if (jawBoneOptional.isPresent()) {
-            software.bernie.geckolib.cache.object.GeoBone jawBone = jawBoneOptional.get();
-            float currentTranslation = Mth.lerp(partialTick, entity.prevJawTranslation, entity.getJawTranslation());
-            jawBone.setPosY(currentTranslation);
-        }
-
         super.render(entity, entityYaw, partialTick, poseStack, bufferSource, packedLight);
     }
 
@@ -49,27 +80,20 @@ public class CaveDwellerRenderer extends GeoEntityRenderer<CaveDwellerEntity> {
                                RenderType renderType, MultiBufferSource bufferSource, VertexConsumer buffer,
                                boolean isReRender, float partialTick, int packedLight, int packedOverlay,
                                float red, float green, float blue, float alpha) {
-
         float usedAlpha;
+        // Dweller is always 15% transparent
+        // TODO:  (except for the head)
+        float defaultAlpha = 0.85F;
 
         if (isReRender) {
             usedAlpha = alpha;
         } else if (animatable.deathTime > 0 || animatable.isPlayingDeathAnimation()) {
-            // 1. Calculate continuous current tick time using partial ticks for smooth rendering
-            float currentTicks = (float) animatable.deathAnimationTicks + partialTick;
-
-            // 2. Determine how far into the death animation the mob is (0.0 = start, 1.0 = end)
-            // (Assumes you have a public field or getter for DEATH_ANIMATION_LENGTH in your entity)
-            float progress = currentTicks / (float) animatable.DEATH_ANIMATION_LENGTH;
-
-            // 3. Clamp progress between 0.0 and 1.0 so alpha calculations don't break
+            float currentTicks = (float) (animatable.deathAnimationTicks) + partialTick;
+            float progress = (currentTicks / (float) animatable.DEATH_ANIMATION_LENGTH) + timingOffset;
             progress = Mth.clamp(progress, 0.0F, 1.0F);
-
-            // 4. Linearly interpolate alpha from 0.95F down to 0.0F based on progress
-            usedAlpha = Mth.lerp(progress, 0.95F, 0.0F);
+            usedAlpha = Mth.lerp(progress, defaultAlpha, 0.0F);
         } else {
-            // Default 5% transparent state when alive
-            usedAlpha = 0.95F;
+            usedAlpha = defaultAlpha;
         }
 
         super.actuallyRender(poseStack, animatable, model, renderType, bufferSource, buffer,
@@ -81,5 +105,66 @@ public class CaveDwellerRenderer extends GeoEntityRenderer<CaveDwellerEntity> {
     public RenderType getRenderType(CaveDwellerEntity animatable, ResourceLocation texture,
                                     @Nullable MultiBufferSource bufferSource, float partialTick) {
         return RenderType.entityTranslucent(texture);
+    }
+
+    // ==========================================
+    //   INNER CHILD LAYER: EYES
+    // ==========================================
+    private static class CaveDwellerEyesLayer extends GeoRenderLayer<CaveDwellerEntity> {
+        private static final ResourceLocation TEXTURE = new ResourceLocation("cavenoise", "textures/entity/cave_dweller_eyes_texture.png");
+        private final RenderType eyesRenderType = RenderTypeAccessor.getCustomEmissiveTranslucent(TEXTURE);
+
+        public CaveDwellerEyesLayer(GeoRenderer<CaveDwellerEntity> entityRendererIn) {
+            super(entityRendererIn);
+        }
+
+        @Override
+        public void render(PoseStack poseStack, CaveDwellerEntity animatable, BakedGeoModel bakedModel, RenderType renderType, MultiBufferSource bufferSource, VertexConsumer buffer, float partialTick, int packedLight, int packedOverlay) {
+            packedLight = 15728880;
+            float usedAlpha;
+
+            if (animatable.deathTime > 0 || animatable.isPlayingDeathAnimation()) {
+                float currentTicks = (float) animatable.deathAnimationTicks + partialTick;
+                float progress = (currentTicks / (float) animatable.DEATH_ANIMATION_LENGTH) + (timingOffset - 4.0F);
+                progress = Mth.clamp(progress, 0.0F, 1.0F);
+                usedAlpha = Mth.lerp(progress, 1.0F, 0.0F);
+            } else {
+                usedAlpha = 1.0F;
+            }
+
+            VertexConsumer customBuffer = bufferSource.getBuffer(this.eyesRenderType);
+            this.getRenderer().reRender(this.getDefaultBakedModel(animatable), poseStack, bufferSource, animatable, this.eyesRenderType, customBuffer, partialTick, packedLight, OverlayTexture.NO_OVERLAY, 1.0F, 1.0F, 1.0F, usedAlpha);
+        }
+    }
+
+    // ==========================================
+    //   INNER CHILD LAYER: GLOW (HEAD OVERLAY)
+    // ==========================================
+    private static class CaveDwellerGlowLayer extends GeoRenderLayer<CaveDwellerEntity> {
+        private static final ResourceLocation TEXTURE = new ResourceLocation("cavenoise", "textures/entity/cave_dweller_glow_texture.png");
+        private final RenderType glowRenderType = RenderTypeAccessor.getCustomEmissiveTranslucent(TEXTURE);
+
+        public CaveDwellerGlowLayer(GeoRenderer<CaveDwellerEntity> entityRendererIn) {
+            super(entityRendererIn);
+        }
+
+        @Override
+        public void render(PoseStack poseStack, CaveDwellerEntity animatable, BakedGeoModel bakedModel, RenderType renderType, MultiBufferSource bufferSource, VertexConsumer buffer, float partialTick, int packedLight, int packedOverlay) {
+            if (bakedModel.getBone("head").isEmpty()) return;
+
+            float usedAlpha;
+
+            if (animatable.deathTime > 0 || animatable.isPlayingDeathAnimation()) {
+                float currentTicks = (float) animatable.deathAnimationTicks + partialTick;
+                float progress = (currentTicks / (float) animatable.DEATH_ANIMATION_LENGTH) + timingOffset;
+                progress = Mth.clamp(progress, 0.0F, 1.0F);
+                usedAlpha = Mth.lerp(progress, 0.05F, 0.0F);
+            } else {
+                usedAlpha = 0.05F;
+            }
+
+            VertexConsumer customBuffer = bufferSource.getBuffer(this.glowRenderType);
+            this.getRenderer().reRender(bakedModel, poseStack, bufferSource, animatable, this.glowRenderType, customBuffer, partialTick, packedLight, OverlayTexture.NO_OVERLAY, 1.0F, 1.0F, 1.0F, usedAlpha);
+        }
     }
 }

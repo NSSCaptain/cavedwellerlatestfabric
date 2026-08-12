@@ -495,16 +495,16 @@ public class DwellerChaseGoal extends Goal {
                     if (!this.shouldUseShortPath && !this.shouldUseClimbPath) {
                         if (!this.mob.getNavigation().moveTo(livingentity, this.speedModifier)) {
                             this.cavedweller.startedMovingChase = true;
-                            this.ticksUntilNextPathRecalculation += 8;
+                            this.ticksUntilNextPathRecalculation += 4;
                         }
                     } else if (this.shouldUseShortPath) {
                         if (!this.mob.getNavigation().moveTo(this.shortPath, this.speedModifier)) {
                             this.cavedweller.startedMovingChase = true;
-                            this.ticksUntilNextPathRecalculation += 8;
+                            this.ticksUntilNextPathRecalculation += 4;
                         }
                     } else if (this.shouldUseClimbPath && !this.mob.getNavigation().moveTo(this.climbPath, this.speedModifier)) {
                         this.cavedweller.startedMovingChase = true;
-                        this.ticksUntilNextPathRecalculation += 8;
+                        this.ticksUntilNextPathRecalculation += 4;
                     }
 
                     this.ticksUntilNextPathRecalculation = this.adjustedTickDelay(this.ticksUntilNextPathRecalculation);
