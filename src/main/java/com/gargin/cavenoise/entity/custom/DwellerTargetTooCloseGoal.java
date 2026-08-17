@@ -1,7 +1,6 @@
 package com.gargin.cavenoise.entity.custom;
 
 import org.jetbrains.annotations.Nullable;
-import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
 import net.minecraft.world.entity.player.Player;
 
@@ -33,18 +32,17 @@ public class DwellerTargetTooCloseGoal extends NearestAttackableTargetGoal<Playe
             if (this.pendingTarget == null) {
                 return false;
             } else {
-                return this.pendingTarget.isSpectator() || this.pendingTarget.isCreative() ? false : this.inPlayerLineOfSight();
+                return this.pendingTarget.isCreative() ? false : this.inPlayerLineOfSight();
             }
         }
     }
 
     @Override
     public void start() {
-        SynchedEntityData var10000 = this.cavedweller.getEntityData();
-        var10000.set(CaveDwellerEntity.AGGRO_ACCESSOR, true);
+        cavedweller.getEntityData().set(CaveDwellerEntity.AGGRO_ACCESSOR, true);
         this.cavedweller.isAggro = true;
         this.cavedweller.rRollResult = 0;
-        this.target = this.pendingTarget;
+        super.target = this.pendingTarget;
         this.cavedweller.setTarget(this.pendingTarget);
         super.start();
     }
@@ -53,6 +51,20 @@ public class DwellerTargetTooCloseGoal extends NearestAttackableTargetGoal<Playe
     public void stop() {
         this.pendingTarget = null;
         super.stop();
+    }
+
+    // Completely simplified to prevent lockup
+    // I really don't know why canContinueToUse() is ever set to true for this goal
+    @Override
+    public boolean canContinueToUse() {
+        /*
+        if (this.pendingTarget.isCreative()) {
+            return false;
+        } else {
+            return this.pendingTarget != null;
+        }
+        */
+        return false;
     }
 
     @Override

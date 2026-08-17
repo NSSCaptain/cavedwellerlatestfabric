@@ -11,7 +11,6 @@ import software.bernie.geckolib.model.data.EntityModelData;
 public class CaveDwellerModel extends GeoModel<CaveDwellerEntity> {
 
     private float defaultJawY = Float.NaN;
-    private float defaultThroatY = Float.NaN;
     private float defaultThroatScaleY = Float.NaN;
 
     public CaveDwellerModel() {
@@ -43,6 +42,8 @@ public class CaveDwellerModel extends GeoModel<CaveDwellerEntity> {
                 head.setRotY(entityData.netHeadYaw() * ((float) Math.PI / 180F));
             }
         }
+
+        // Dynamic jaw animation
         CoreGeoBone jawBone = this.getAnimationProcessor().getBone("jaw");
         if (jawBone != null) {
             if (Float.isNaN(defaultJawY)) {
@@ -89,7 +90,6 @@ public class CaveDwellerModel extends GeoModel<CaveDwellerEntity> {
         }
         CoreGeoBone throatBone = this.getAnimationProcessor().getBone("throat");
         if (throatBone != null) {
-            // Cache the default Y scale on the first frame
             if (Float.isNaN(defaultThroatScaleY)) {
                 defaultThroatScaleY = throatBone.getScaleY();
             }

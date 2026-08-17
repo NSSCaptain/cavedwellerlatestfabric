@@ -1,270 +1,270 @@
 {
   "cavenoise_1": {
-    "subtitle": "sounds.cavenoise.cavenoise_1",
+    "subtitle": "Unnatural sound",
     "sounds": [
       "cavenoise:cavenoise_1"
     ]
   },
   "cavenoise_2": {
-    "subtitle": "sound.cavenoise.cavenoise_2",
+    "subtitle": "Unnatural sound",
     "sounds": [
       "cavenoise:cavenoise_2"
     ]
   },
   "cavenoise_3": {
-    "subtitle": "sound.cavenoise.cavenoise_3",
+    "subtitle": "Unnatural sound",
     "sounds": [
       "cavenoise:cavenoise_3"
     ]
   },
   "cavenoise_4": {
-    "subtitle": "sound.cavenoise.cavenoise_4",
+    "subtitle": "Unnatural sound",
     "sounds": [
       "cavenoise:cavenoise_4"
     ]
   },
   "cavenoise_5": {
-    "subtitle": "sound.cavenoise.cavenoise_5",
+    "subtitle": "Unnatural sound",
     "sounds": [
       "cavenoise:cavenoise_5"
     ]
   },
   "cavenoise_6": {
-    "subtitle": "sound.cavenoise.cavenoise_6",
+    "subtitle": "Unnatural sound",
     "sounds": [
       "cavenoise:cavenoise_6"
     ]
   },
   "cavenoise_7": {
-    "subtitle": "sound.cavenoise.cavenoise_7",
+    "subtitle": "Unnatural sound",
     "sounds": [
       "cavenoise:cavenoise_7"
     ]
   },
   "cavenoise_8": {
-    "subtitle": "sound.cavenoise.cavenoise_8",
+    "subtitle": "Unnatural sound",
     "sounds": [
       "cavenoise:cavenoise_8"
     ]
   },
   "cavenoise_9": {
-    "subtitle": "sound.cavenoise.cavenoise_9",
+    "subtitle": "Unnatural sound",
     "sounds": [
       "cavenoise:cavenoise_9"
     ]
   },
   "step_1": {
-    "subtitle": "sound.cavenoise.step_1",
+    "subtitle": "Footsteps",
     "sounds": [
       "cavenoise:step_1"
     ]
   },
   "step_2": {
-    "subtitle": "sound.cavenoise.step_2",
+    "subtitle": "Footsteps",
     "sounds": [
       "cavenoise:step_2"
     ]
   },
   "step_3": {
-    "subtitle": "sound.cavenoise.step_3",
+    "subtitle": "Footsteps",
     "sounds": [
       "cavenoise:step_3"
     ]
   },
   "step_4": {
-    "subtitle": "sound.cavenoise.step_4",
+    "subtitle": "Footsteps",
     "sounds": [
       "cavenoise:step_4"
     ]
   },
   "chase_1": {
-    "subtitle": "sound.cavenoise.chase_1",
+    "subtitle": "§kCave_Dweller§r screeches",
     "sounds": [
       "cavenoise:chase_1"
     ]
   },
   "chase_2": {
-    "subtitle": "sound.cavenoise.chase_2",
+    "subtitle": "§kCave_Dweller§r screeches",
     "sounds": [
       "cavenoise:chase_2"
     ]
   },
   "chase_3": {
-    "subtitle": "sound.cavenoise.chase_3",
+    "subtitle": "§kCave_Dweller§r screeches",
     "sounds": [
       "cavenoise:chase_3"
     ]
   },
   "chase_4": {
-    "subtitle": "sound.cavenoise.chase_4",
+    "subtitle": "§kCave_Dweller§r screeches",
     "sounds": [
       "cavenoise:chase_4"
     ]
   },
   "flee_1": {
-    "subtitle": "sound.cavenoise.flee_1",
+    "subtitle": "sound.cavenoise.flee",
     "sounds": [
       "cavenoise:flee_1"
     ]
   },
   "flee_2": {
-    "subtitle": "sound.cavenoise.flee_2",
+    "subtitle": "sound.cavenoise.flee",
     "sounds": [
       "cavenoise:flee_2"
     ]
   },
   "disappear": {
-    "subtitle": "sound.cavenoise.disappear",
+    "subtitle": "§kCave_Dweller§r disappeared",
     "sounds": [
       "cavenoise:disappear"
     ]
   },
   "spotted_1": {
-    "subtitle": "sound.cavenoise.spotted_1",
+    "subtitle": "You spotted it",
     "sounds": [
       "cavenoise:spotted_1"
     ]
   },
   "spotted_2": {
-    "subtitle": "sound.cavenoise.spotted_2",
+    "subtitle": "You spotted it",
     "sounds": [
       "cavenoise:spotted_2"
     ]
   },
   "spotted_3": {
-    "subtitle": "sound.cavenoise.spotted_3",
+    "subtitle": "You spotted it",
     "sounds": [
       "cavenoise:spotted_3"
     ]
   },
   "spotted_distant": {
-    "subtitle": "sound.cavenoise.spotted_distant",
+    "subtitle": "You see something",
     "sounds": [
       "cavenoise:spotted_distant"
     ]
   },
   "dweller_death_1": {
-    "subtitle": "sound.cavenoise.dweller_death_1",
+    "subtitle": "§kCave_Dweller§r dies",
     "sounds": [
       "cavenoise:dweller_death_1"
     ]
   },
   "dweller_death_2": {
-    "subtitle": "sound.cavenoise.dweller_death_2",
+    "subtitle": "§kCave_Dweller§r dies",
     "sounds": [
       "cavenoise:dweller_death_2"
     ]
   },
   "dweller_death_3": {
-    "subtitle": "sound.cavenoise.dweller_death_3",
+    "subtitle": "§kCave_Dweller§r dies",
     "sounds": [
       "cavenoise:dweller_death_3"
     ]
   },
   "dweller_death_4": {
-    "subtitle": "sound.cavenoise.dweller_death_4",
+    "subtitle": "§kCave_Dweller§r dies",
     "sounds": [
       "cavenoise:dweller_death_4"
     ]
   },
   "hurt_1": {
-    "subtitle": "sound.cavenoise.hurt_1",
+    "subtitle": "§kCave_Dweller§r hurts",
     "sounds": [
       "cavenoise:hurt_1"
     ]
   },
   "hurt_2": {
-    "subtitle": "sound.cavenoise.hurt_2",
+    "subtitle": "§kCave_Dweller§r hurts",
     "sounds": [
       "cavenoise:hurt_2"
     ]
   },
   "hurt_3": {
-    "subtitle": "sound.cavenoise.hurt_3",
+    "subtitle": "§kCave_Dweller§r hurts",
     "sounds": [
       "cavenoise:hurt_3"
     ]
   },
   "hurt_4": {
-    "subtitle": "sound.cavenoise.hurt_4",
+    "subtitle": "§kCave_Dweller§r hurts",
     "sounds": [
       "cavenoise:hurt_4"
     ]
   },
   "stalk_1": {
-    "subtitle": "sound.cavenoise.stalk_1",
+    "subtitle": "Something draws near",
     "sounds": [
       "cavenoise:stalk_1"
     ]
   },
   "stalk_2": {
-    "subtitle": "sound.cavenoise.stalk_2",
+    "subtitle": "Something draws near",
     "sounds": [
       "cavenoise:stalk_2"
     ]
   },
   "stalk_3": {
-    "subtitle": "sound.cavenoise.stalk_3",
+    "subtitle": "Something draws near",
     "sounds": [
       "cavenoise:stalk_3"
     ]
   },
   "stalk_4": {
-    "subtitle": "sound.cavenoise.stalk_4",
+    "subtitle": "Something draws near",
     "sounds": [
       "cavenoise:stalk_4"
     ]
   },
   "stalk_5": {
-    "subtitle": "sound.cavenoise.stalk_5",
+    "subtitle": "Something draws near",
     "sounds": [
       "cavenoise:stalk_5"
     ]
   },
   "climb_1": {
-    "subtitle": "sound.cavenoise.climb_1",
+    "subtitle": "§kCave_Dweller§r climbs",
     "sounds": [
       "cavenoise:climb_1"
     ]
   },
   "climb_2": {
-    "subtitle": "sound.cavenoise.climb_2",
+    "subtitle": "§kCave_Dweller§r climbs",
     "sounds": [
       "cavenoise:climb_2"
     ]
   },
   "climb_3": {
-    "subtitle": "sound.cavenoise.climb_3",
+    "subtitle": "§kCave_Dweller§r climbs",
     "sounds": [
       "cavenoise:climb_3"
     ]
   },
   "climb_4": {
-    "subtitle": "sound.cavenoise.climb_4",
+    "subtitle": "§kCave_Dweller§r climbs",
     "sounds": [
       "cavenoise:climb_4"
     ]
   },
   "climb_5": {
-    "subtitle": "sound.cavenoise.climb_5",
+    "subtitle": "§kCave_Dweller§r climbs",
     "sounds": [
       "cavenoise:climb_5"
     ]
   },
   "climb_6": {
-    "subtitle": "sound.cavenoise.climb_6",
+    "subtitle": "§kCave_Dweller§r climbs",
     "sounds": [
       "cavenoise:climb_6"
     ]
   },
   "climb_7": {
-    "subtitle": "sound.cavenoise.climb_7",
+    "subtitle": "§kCave_Dweller§r climbs",
     "sounds": [
       "cavenoise:climb_7"
     ]
   },
   "climb_8": {
-    "subtitle": "sound.cavenoise.climb_8",
+    "subtitle": "§kCave_Dweller§r climbs",
     "sounds": [
       "cavenoise:climb_8"
     ]

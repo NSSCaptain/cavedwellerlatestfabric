@@ -6,6 +6,7 @@ import java.util.logging.LogManager;
 import java.util.logging.Logger;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.EntitySelector;
@@ -15,13 +16,13 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.pathfinder.Node;
 import net.minecraft.world.level.pathfinder.Path;
 import net.minecraft.world.phys.Vec2;
 import net.minecraft.world.phys.Vec3;
-import org.jetbrains.annotations.Nullable;
+
+import net.minecraft.server.level.ServerLevel;
+import org.joml.Vector3f;
 
 public class DwellerChaseGoal extends Goal {
     protected final PathfinderMob mob;
@@ -79,8 +80,8 @@ public class DwellerChaseGoal extends Goal {
     BlockPos oldBlock = new BlockPos(0, 0, 0);
     int torchDestructionRadius = 1;
     BlockPos checkBlockForTorch;
-    boolean isStartSqueezingOrSqueezingTickRunning = false;
     private Player target;
+
 
     public DwellerChaseGoal(PathfinderMob pMob, CaveDwellerEntity pCaveDweller, double pSpeedModifier, boolean pFollowingTargetEvenIfNotSeen, float pTicksTillChase) {
         this.mob = pMob;
@@ -91,13 +92,69 @@ public class DwellerChaseGoal extends Goal {
         this.ticksTillChase = pTicksTillChase;
         this.currentTicksTillChase = pTicksTillChase;
         this.vecNodePos = null;
-        this.ticksToSqueeze = 15;
         this.nodePos = null;
+        this.ticksToSqueeze = 15;
         this.ticksTillLeave = 600;
         this.currentTicksTillLeave = this.ticksTillLeave;
     }
 
-    public void setTarget(@Nullable Player target) { this.target = target; }
+    /// DEBUG Path visualizer
+    public void renderDebugPath(Path path,  int pathType) {
+        if (path != null && !this.cavedweller.level().isClientSide()) {
+
+            DustParticleOptions dustColor;
+
+            if (pathType == 0) {
+                float Red = 1.0F;
+                float Green = 0.0F;
+                float Blue = 0.0F;
+                float Scale = 0.5F; // 1.0 = full block
+
+                dustColor = new DustParticleOptions(new Vector3f(Red, Green, Blue), Scale);
+
+            } else if (pathType == 1) {
+                float Red = 0.0F;
+                float Green = 1.0F;
+                float Blue = 0.0F;
+                float Scale = 0.5F; // 1.0 = full block
+
+                dustColor = new DustParticleOptions(new Vector3f(Red, Green, Blue), Scale);
+
+            } else if (pathType == 2) {
+                float Red = 0.0F;
+                float Green = 0.0F;
+                float Blue = 1.0F;
+                float Scale = 0.5F; // 1.0 = full block
+
+                dustColor = new DustParticleOptions(new Vector3f(Red, Green, Blue), Scale);
+
+            } else {
+                return;
+            }
+
+            for (int i = 0; i < path.getNodeCount(); i++) {
+
+                Node node = path.getNode(i);
+                ServerLevel serverLevel = (ServerLevel) this.cavedweller.level();
+
+                double x = node.x + 0.5;
+                double y = node.y + 0.2;
+                double z = node.z + 0.5;
+
+                serverLevel.sendParticles(dustColor, x, y, z,
+                        0,     // Count MUST be 0 to trigger custom velocity override handling
+                        0.0,      // X Velocity
+                        -0.01,      // Y Velocity (Slight negative value causes a slow-sink / longer fade)
+                        0.0,      // Z Velocity
+                        1.0       // Speed modifier multiplier
+                );
+            }
+        }
+    }
+
+    public void setTarget(Player target) {
+        this.target = target;
+    }
 
     @Override
     public boolean canUse() {
@@ -109,11 +166,12 @@ public class DwellerChaseGoal extends Goal {
                 return false;
             } else {
                 this.lastCanUseCheck = i;
-                this.setTarget(this.cavedweller.level().getNearestPlayer(this.cavedweller, 200.0D));
+                //this.setTarget(this.cavedweller.level().getNearestPlayer(this.cavedweller, 200.0D));
                 LivingEntity livingentity = this.mob.getTarget();
                 if (livingentity == null) {
                     return false;
-                } else if (!livingentity.isAttackable() || this.target.isSpectator() || this.target.isCreative()) {
+                //} else if (!livingentity.isAttackable() || this.target.isSpectator() || this.target.isCreative()) {
+                } else if (!livingentity.isAttackable()) {
                     return false;
                 } else if (this.canPenalize) {
                     if (--this.ticksUntilNextPathRecalculation <= 0) {
@@ -150,7 +208,8 @@ public class DwellerChaseGoal extends Goal {
         } else if (!this.mob.isWithinRestriction(livingentity.blockPosition())) {
             return false;
         } else {
-            return !(livingentity instanceof Player player) || !player.isInvisible() && !player.isCreative() && !player.isSpectator();
+            //return !(livingentity instanceof Player player) || !player.isInvisible() && !player.isCreative() && !player.isSpectator();
+            return !(livingentity instanceof Player) || (!livingentity.isDeadOrDying() && !((Player)livingentity).isCreative());
         }
     }
 
@@ -158,7 +217,6 @@ public class DwellerChaseGoal extends Goal {
     public void start() {
         this.ticksUntilNextPathRecalculation = 0;
         this.ticksUntilNextAttack = 0;
-        super.start();
     }
 
     @Override
@@ -168,10 +226,9 @@ public class DwellerChaseGoal extends Goal {
             this.mob.setTarget(null);
         }
 
-        this.cavedweller.squeezeCrawling = false;
-        SynchedEntityData var10000 = this.cavedweller.getEntityData();
-        CaveDwellerEntity var10001 = this.cavedweller;
-        var10000.set(CaveDwellerEntity.AGGRO_ACCESSOR, false);
+        //this.cavedweller.squeezeCrawling = false;
+        this.squeezing = false;
+        this.cavedweller.getEntityData().set(CaveDwellerEntity.AGGRO_ACCESSOR, false);
         this.cavedweller.isAggro = false;
         this.cavedweller.refreshDimensions();
         this.currentTicksTillChase = this.ticksTillChase;
@@ -189,9 +246,7 @@ public class DwellerChaseGoal extends Goal {
     public void tickAggroClock() {
         --this.currentTicksTillChase;
         if (this.currentTicksTillChase <= 0.0F) {
-            SynchedEntityData var10000 = this.cavedweller.getEntityData();
-            CaveDwellerEntity var10001 = this.cavedweller;
-            var10000.set(CaveDwellerEntity.AGGRO_ACCESSOR, true);
+            this.cavedweller.getEntityData().set(CaveDwellerEntity.AGGRO_ACCESSOR, true);
         }
 
         this.cavedweller.isAggro = true;
@@ -222,12 +277,9 @@ public class DwellerChaseGoal extends Goal {
         this.vecTargetPos = null;
         this.currentTicksToSqueeze = 0;
         */
-        isStartSqueezingOrSqueezingTickRunning = true;
         this.squeezing = true;
-        System.out.println("[DwellerChaseGoal] startSqueezing(): set this.squeezing to true");
-        SynchedEntityData var10000 = this.cavedweller.getEntityData();
-        CaveDwellerEntity var10001 = this.cavedweller;
-        var10000.set(CaveDwellerEntity.SQUEEZING_ACCESSOR, true);
+        SynchedEntityData cavedwellerEntityData = this.cavedweller.getEntityData();
+        cavedwellerEntityData.set(CaveDwellerEntity.SQUEEZING_ACCESSOR, true);
         // Same here
         /*
         this.nodePos = null;
@@ -235,53 +287,53 @@ public class DwellerChaseGoal extends Goal {
     }
 
     public void squeezingTick() {
-        boolean isStartSqueezingOrSqueezingTickRunning = true;
-        System.out.println("[DwellerChaseGoal] squeezingTick(): squeezingTick() called!");
-        this.cavedweller.setNoGravity(true);
         this.cavedweller.noPhysics = true;
-        if (this.nodePos == null && this.mob.getNavigation().getPath() != null) {
+        this.cavedweller.horizontalCollision = true;
+
+        if (this.mob.getNavigation().getPath() != null) {
             this.nodePos = this.mob.getNavigation().getPath().getNextNodePos();
         }
-        this.vecMobPos = vecNodePos;
-        this.vecTargetPos = this.vecMobPos;
 
         this.mob.getNavigation().stop();
+
         if (this.nodePos == null) {
-            System.out.println("[DwellerChaseGoal] squeezingTick(): nodePos == null; called stopSqueezing()");
             this.stopSqueezing();
         } else {
             if (this.vecNodePos == null) {
-                this.vecNodePos = new Vec3((double)this.nodePos.getX(), (double)this.nodePos.getY(), (double)this.nodePos.getZ());
+                this.vecNodePos = new net.minecraft.world.phys.Vec3((double)this.nodePos.getX(), (double)this.nodePos.getY(), (double)this.nodePos.getZ());
             }
 
             this.nodePositionCooldownPos = this.vecNodePos;
-            Vec3 vecOldMobPos = this.cavedweller.getViewVector(1.0F);
+            net.minecraft.world.phys.Vec3 vecOldMobPos = this.cavedweller.getViewVector(1.0F);
+
             if (this.xPathStartVec == null) {
                 if (vecOldMobPos.x < this.vecNodePos.x) {
-                    this.xPathStartVec = new Vec3(this.vecNodePos.x - 1.0F, this.vecNodePos.y, this.vecNodePos.z + 0.5F);
-                    this.xPathTargetVec = new Vec3(this.vecNodePos.x + 1.0F, this.vecNodePos.y, this.vecNodePos.z + 0.5F);
+                    this.xPathStartVec = new net.minecraft.world.phys.Vec3(this.vecNodePos.x - (double)1.0F, this.vecNodePos.y - (double)1.0F, this.vecNodePos.z + (double)0.5F);
+                    this.xPathTargetVec = new net.minecraft.world.phys.Vec3(this.vecNodePos.x + (double)1.0F, this.vecNodePos.y - (double)1.0F, this.vecNodePos.z + (double)0.5F);
                 } else {
-                    this.xPathStartVec = new Vec3(this.vecNodePos.x + 1.0F, this.vecNodePos.y, this.vecNodePos.z + 0.5F);
-                    this.xPathTargetVec = new Vec3(this.vecNodePos.x - 1.0F, this.vecNodePos.y, this.vecNodePos.z + 0.5F);
+                    this.xPathStartVec = new net.minecraft.world.phys.Vec3(this.vecNodePos.x + (double)1.0F, this.vecNodePos.y - (double)1.0F, this.vecNodePos.z + (double)0.5F);
+                    this.xPathTargetVec = new net.minecraft.world.phys.Vec3(this.vecNodePos.x - (double)1.0F, this.vecNodePos.y - (double)1.0F, this.vecNodePos.z + (double)0.5F);
                 }
             }
 
             if (this.zPathStartVec == null) {
                 if (vecOldMobPos.z < this.vecNodePos.z) {
-                    this.zPathStartVec = new Vec3(this.vecNodePos.x + 0.5F, this.vecNodePos.y, this.vecNodePos.z - 1.0F);
-                    this.zPathTargetVec = new Vec3(this.vecNodePos.x + 0.5F, this.vecNodePos.y, this.vecNodePos.z + 1.0F);
+                    this.zPathStartVec = new net.minecraft.world.phys.Vec3(this.vecNodePos.x + (double)0.5F, this.vecNodePos.y - (double)1.0F, this.vecNodePos.z - (double)1.0F);
+                    this.zPathTargetVec = new net.minecraft.world.phys.Vec3(this.vecNodePos.x + (double)0.5F, this.vecNodePos.y - (double)1.0F, this.vecNodePos.z + (double)1.0F);
                 } else {
-                    this.zPathStartVec = new Vec3(this.vecNodePos.x + 0.5F, this.vecNodePos.y, this.vecNodePos.z + 1.0F);
-                    this.zPathTargetVec = new Vec3(this.vecNodePos.x + 0.5F, this.vecNodePos.y, this.vecNodePos.z - 1.0F);
+                    this.zPathStartVec = new net.minecraft.world.phys.Vec3(this.vecNodePos.x + (double)0.5F, this.vecNodePos.y - (double)1.0F, this.vecNodePos.z + (double)1.0F);
+                    this.zPathTargetVec = new net.minecraft.world.phys.Vec3(this.vecNodePos.x + (double)0.5F, this.vecNodePos.y - (double)1.0F, this.vecNodePos.z - (double)1.0F);
                 }
             }
 
-            BlockPos.MutableBlockPos blockpos$mutableblockpos = new BlockPos.MutableBlockPos(this.xPathTargetVec.x, this.xPathTargetVec.y, this.xPathTargetVec.z);
-            BlockState blockstate = this.cavedweller.level().getBlockState(blockpos$mutableblockpos);
-            boolean xBlocked = blockstate.isCollisionShapeFullBlock(this.cavedweller.level(), blockpos$mutableblockpos);
-            blockpos$mutableblockpos = new BlockPos.MutableBlockPos(this.zPathTargetVec.x, this.zPathTargetVec.y, this.zPathTargetVec.z);
+            net.minecraft.core.BlockPos.MutableBlockPos blockpos$mutableblockpos = new net.minecraft.core.BlockPos.MutableBlockPos(this.xPathTargetVec.x, this.xPathTargetVec.y, this.xPathTargetVec.z);
+            net.minecraft.world.level.block.state.BlockState blockstate = this.cavedweller.level().getBlockState(blockpos$mutableblockpos);
+            boolean xBlocked = blockstate.blocksMotion();
+
+            blockpos$mutableblockpos = new net.minecraft.core.BlockPos.MutableBlockPos(this.zPathTargetVec.x, this.zPathTargetVec.y, this.zPathTargetVec.z);
             blockstate = this.cavedweller.level().getBlockState(blockpos$mutableblockpos);
-            boolean zBlocked = blockstate.isCollisionShapeFullBlock(this.cavedweller.level(), blockpos$mutableblockpos);
+            boolean zBlocked = blockstate.blocksMotion();
+
             if (xBlocked) {
                 this.vecMobPos = this.zPathStartVec;
                 this.vecTargetPos = this.zPathTargetVec;
@@ -293,51 +345,38 @@ public class DwellerChaseGoal extends Goal {
             }
 
             if (this.vecTargetPos != null && this.vecMobPos != null) {
-                // Inc. squeeze timer
                 ++this.currentTicksToSqueeze;
                 float tickF = (float)this.currentTicksToSqueeze / (float)this.ticksToSqueeze;
-                // Define the interpolation for the dweller's movement
-                Vec3 vecCurrentMobPos = new Vec3(lerp(this.vecMobPos.x, this.vecTargetPos.x, (double)tickF), this.vecMobPos.y, lerp(this.vecMobPos.z, this.vecTargetPos.z, (double)tickF));
-                // Define the dweller's rotation
-                Vec3 rotAxis = new Vec3(this.vecTargetPos.x - this.vecMobPos.x, 0.0F, this.vecTargetPos.z - this.vecMobPos.z); rotAxis = rotAxis.normalize();
-                // Rotate the body
+
+                net.minecraft.world.phys.Vec3 vecCurrentMobPos = new net.minecraft.world.phys.Vec3(
+                        lerp(this.vecMobPos.x, this.vecTargetPos.x, (double)tickF),
+                        this.vecMobPos.y,
+                        lerp(this.vecMobPos.z, this.vecTargetPos.z, (double)tickF)
+                );
+
+                net.minecraft.world.phys.Vec3 rotAxis = new net.minecraft.world.phys.Vec3(this.vecTargetPos.x - this.vecMobPos.x, (double)0.0F, this.vecTargetPos.z - this.vecMobPos.z);
+                rotAxis = rotAxis.normalize();
+
                 double rotAngle = Math.toDegrees(Math.atan2(-rotAxis.x, rotAxis.z));
                 this.cavedweller.setYBodyRot((float)rotAngle);
-                // Move to destination pos.
                 this.cavedweller.moveTo(vecCurrentMobPos.x, vecCurrentMobPos.y, vecCurrentMobPos.z, (float)rotAngle, (float)rotAngle);
 
-                // If tickF reaches 1.0 (or higher), the squeeze is done
                 if (tickF >= 1.0F) {
-                    // Double check dweller reached position(?)
                     this.cavedweller.setPos(this.vecTargetPos.x, this.vecTargetPos.y, this.vecTargetPos.z);
-                    // Stop squeezing
-                    System.out.println("[DwellerChaseGoal] squeezingTick(): tickF is >= 1.0 (" + tickF + "); called stopSqueezing()");
                     this.stopSqueezing();
-                    currentTicksToSqueeze = 1;
-                    ticksToSqueeze = 1;
                 }
-
             } else {
-                if (this.vecTargetPos == null) {
-                    System.out.println("[DwellerChaseGoal] squeezingTick(): this.vecTargetPos == null; called stopSqueezing()");
-                    this.stopSqueezing();
-                } else if (this.vecMobPos == null) {
-                    System.out.println("[DwellerChaseGoal] squeezingTick(): this.vecMobPos == null; called stopSqueezing()");
-                    this.stopSqueezing();
-                }
+                this.stopSqueezing();
             }
         }
     }
 
     public void stopSqueezing() {
-        isStartSqueezingOrSqueezingTickRunning = false;
-        System.out.println("[DwellerChaseGoal] stopSqueezing(): set this.squeezing to false");
         this.squeezing = false;
-        SynchedEntityData var10000 = this.cavedweller.getEntityData();
-        CaveDwellerEntity var10001 = this.cavedweller;
-        var10000.set(CaveDwellerEntity.SQUEEZING_ACCESSOR, false);
-        this.cavedweller.setNoGravity(false);
+        net.minecraft.network.syncher.SynchedEntityData cavedwellerEntityData = this.cavedweller.getEntityData();
+        cavedwellerEntityData.set(CaveDwellerEntity.SQUEEZING_ACCESSOR, false);
         this.cavedweller.noPhysics = false;
+        this.cavedweller.horizontalCollision = false;
     }
 
     public void startClimbing(BlockPos pClimbPos) {
@@ -363,35 +402,32 @@ public class DwellerChaseGoal extends Goal {
         System.out.println("stopped climbing");
     }
 
-    public boolean checkIfShouldSqueeze(Path pathToCheck) {
-        // If there is no path, don't squeeze
+    public boolean checkIfShouldSqueeze(net.minecraft.world.level.pathfinder.Path pathToCheck) {
         if (pathToCheck == null) {
             return false;
+        } else {
+            net.minecraft.core.BlockPos blockpos = null;
+
+            if (!pathToCheck.isDone()) {
+
+                blockpos = pathToCheck.getNextNodePos();
+
+                if (this.nodePositionCooldownPos != null
+                        && blockpos.getX() == (int)this.nodePositionCooldownPos.x
+                        && blockpos.getY() == (int)this.nodePositionCooldownPos.y
+                        && blockpos.getZ() == (int)this.nodePositionCooldownPos.z) {
+                    return false;
+                } else {
+                    net.minecraft.core.BlockPos.MutableBlockPos blockpos$mutableblockpos = new net.minecraft.core.BlockPos.MutableBlockPos(blockpos.getX(), blockpos.getY() + 1, blockpos.getZ());
+                    net.minecraft.world.level.block.state.BlockState blockstate = this.cavedweller.level().getBlockState(blockpos$mutableblockpos);
+                    boolean flag = blockstate.blocksMotion();
+
+                    return flag;
+                }
+            } else {
+                return false;
+            }
         }
-        // If the path is finished, don't squeeze
-        if (pathToCheck.isDone()) {
-            return false;
-        }
-        BlockPos blockpos = pathToCheck.getNextNodePos();
-        // Prevents the AI from spamming checks on the same stuck position
-        if (this.nodePositionCooldownPos != null
-                && blockpos.getX() == (int) this.nodePositionCooldownPos.x()
-                && blockpos.getY() == (int) this.nodePositionCooldownPos.y()
-                && blockpos.getZ() == (int) this.nodePositionCooldownPos.z()) {
-            return false;
-        }
-        // Target the block exactly 1 block above the floor path (head height)
-        BlockPos.MutableBlockPos blockpos$mutableblockpos = new BlockPos.MutableBlockPos(
-                blockpos.getX(),
-                blockpos.getY() + 1,
-                blockpos.getZ()
-        );
-        BlockState blockstate = this.cavedweller.level().getBlockState(blockpos$mutableblockpos);
-        // FIX: Added '!' so flag is TRUE if the block has collision (is solid)
-        boolean flag = !blockstate.getCollisionShape(this.cavedweller.level(), blockpos$mutableblockpos).isEmpty();
-        System.out.println("[DwellerChaseGoal] checkIfShouldSqueeze(): returned flag (" + flag + ")");
-        // result may not be accurate to whether dweller can squeeze or not
-        return flag;
     }
 
     public BlockPos checkIfShouldClimbAndReturnPos(Path pathToCheck) {
@@ -415,41 +451,53 @@ public class DwellerChaseGoal extends Goal {
         }
     }
 
+    /// Main tick
     public void aggroTick() {
         this.cavedweller.playChaseSound();
         this.cavedweller.noPhysics = false;
         this.cavedweller.setNoGravity(false);
+        this.renderDebugPath(this.shortPath, 0);
+        // Define the target
         LivingEntity livingentity = this.mob.getTarget();
-        // If dweller nav. is not null, and it should squeeze, and it should use short path, start squeezing
-        System.out.println("[DwellerChaseGoal] aggroTick(): called checkIfShouldSqueeze()");
+
+        // Check if dweller should squeeze using the information provided by this.mob.getNavigation().getPath() and this.shouldUseShortPath
+        // TODO: Seems to not understand what space should be squeezed through and/or it squeezes incorrectly
         if (this.checkIfShouldSqueeze(this.mob.getNavigation().getPath()) && this.shouldUseShortPath) {
-            System.out.println("[DwellerChaseGoal] aggroTick(): checkIfShouldSqueeze() returned true; called startSqueezing()");
             this.startSqueezing();
-            // System.out.println("[DwellerChaseGoal] aggroTick(): set this.squeezing to true (redundant?)");
-            // this.squeezing = true;
-            SynchedEntityData var10000 = this.cavedweller.getEntityData();
-            CaveDwellerEntity var10001 = this.cavedweller;
-            var10000.set(CaveDwellerEntity.SQUEEZING_ACCESSOR, true);
+            // Set this.squeezing to true (redundant, since it's set in startSqueezing() anyway?)
+            this.squeezing = true;
+            SynchedEntityData cavedwellerEntityData = this.cavedweller.getEntityData();
+            cavedwellerEntityData.set(CaveDwellerEntity.SQUEEZING_ACCESSOR, true);
+            // If dweller should NOT squeeze, do all the following other checks:
         } else {
-                System.out.println("[DwellerChaseGoal] aggroTick(): checkIfShouldSqueeze() returned false; continuing");
+                // Check if dweller should climb using the information provided by this.shortPath
                 BlockPos tempClimbPos = this.checkIfShouldClimbAndReturnPos(this.shortPath);
                 if (tempClimbPos != null && this.shouldUseShortPath) {
                     this.startClimbing(tempClimbPos);
                     return;
             }
 
+            // If dweller should not squeeze OR climb...
+            // Do this huge check for calculating path
             if (livingentity != null) {
                 double d0 = this.mob.distanceToSqr(livingentity);
+                // This prevents running the check every frame (in order to prevent lag)
                 this.ticksUntilNextPathRecalculation = Math.max(this.ticksUntilNextPathRecalculation - 1, 0);
+                // If the timer hits 0 and either A) dweller can see the player, B) The player has moved more than 1 block from the last recorded path target or C) a random 5% chance triggers...
                 if ((this.followingTargetEvenIfNotSeen || this.mob.getSensing().hasLineOfSight(livingentity) && this.ticksUntilNextPathRecalculation <= 0 && (this.pathedTargetX == (double)0.0F && this.pathedTargetY == (double)0.0F && this.pathedTargetZ == (double)0.0F || livingentity.distanceToSqr(this.pathedTargetX, this.pathedTargetY, this.pathedTargetZ) >= (double)1.0F || this.mob.getRandom().nextFloat() < 0.05F))) {
+                    // Update player's last known coords
                     this.pathedTargetX = livingentity.getX();
                     this.pathedTargetY = livingentity.getY();
                     this.pathedTargetZ = livingentity.getZ();
                     this.ticksUntilNextPathRecalculation = 2;
+
+                    // Penalty system
                     if (this.canPenalize) {
                         this.ticksUntilNextPathRecalculation += this.failedPathFindingPenalty;
                         if (this.mob.getNavigation().getPath() != null) {
                             Node finalPathPoint = this.mob.getNavigation().getPath().getEndNode();
+                            // If its previous pathfinding attempt succeeded to reach the player, reset penalty to 0
+                            // If it did not, add a 10-tick calculation delay penalty
                             if (finalPathPoint != null && livingentity.distanceToSqr((double)finalPathPoint.x, (double)finalPathPoint.y, (double)finalPathPoint.z) < (double)1.0F) {
                                 this.failedPathFindingPenalty = 0;
                             } else {
@@ -460,30 +508,29 @@ public class DwellerChaseGoal extends Goal {
                         }
                     }
 
+                    // Generate short path to player
                     this.getShortPath(livingentity);
                     if (this.shortPath != null) {
                         Node finalShortPathPoint = this.shortPath.getEndNode();
-                        if (finalShortPathPoint != null && livingentity.distanceToSqr((double) finalShortPathPoint.x, (double) finalShortPathPoint.y, (double) finalShortPathPoint.z) < (double) 2.0F) {
-                            this.shortPathAvailable = true;
-                        } else {
-                            this.shortPathAvailable = false;
-                        }
+                        // If the short path successfully ends close to the player, set this.shortPathAvailable to true
+                        // If it did not, set this.shortPathAvailable to false
+                        this.shortPathAvailable = finalShortPathPoint != null && livingentity.distanceToSqr((double) finalShortPathPoint.x, (double) finalShortPathPoint.y, (double) finalShortPathPoint.z) < (double) 2.0F;
                     } else {
                         this.shortPathAvailable = false;
                     }
 
+                    // Generate climb path to player
                     this.getClimbPath(livingentity);
                     if (this.climbPath != null) {
                         Node finalClimbPathPoint = this.shortPath.getEndNode();
-                        if (finalClimbPathPoint != null && livingentity.distanceToSqr((double) finalClimbPathPoint.x, (double) finalClimbPathPoint.y, (double) finalClimbPathPoint.z) < (double) 1.0F) {
-                            this.climbPathAvailable = true;
-                        } else {
-                            this.climbPathAvailable = false;
-                        }
+                        // If the climb path successfully ends close to the player, set this.shortPathAvailable to true
+                        // If it did not, set this.shortPathAvailable to false
+                        this.climbPathAvailable = finalClimbPathPoint != null && livingentity.distanceToSqr((double) finalClimbPathPoint.x, (double) finalClimbPathPoint.y, (double) finalClimbPathPoint.z) < (double) 1.0F;
                     } else {
                         this.climbPathAvailable = false;
                     }
 
+                    // Save performance by reducing path check frequency when player is far (>32 blocks)
                     this.shouldUseShortPath = this.shortPathAvailable;
                     this.shouldUseClimbPath = !this.shortPathAvailable && this.climbPathAvailable && !this.normalPathAvailable;
                     if (d0 > (double)1024.0F) {
@@ -492,29 +539,37 @@ public class DwellerChaseGoal extends Goal {
                         this.ticksUntilNextPathRecalculation += 5;
                     }
 
+                    // If neither a short path nor a climb path should be used...
                     if (!this.shouldUseShortPath && !this.shouldUseClimbPath) {
                         if (!this.mob.getNavigation().moveTo(livingentity, this.speedModifier)) {
                             this.cavedweller.startedMovingChase = true;
                             this.ticksUntilNextPathRecalculation += 4;
                         }
+                        // If a short path should be used...
                     } else if (this.shouldUseShortPath) {
                         if (!this.mob.getNavigation().moveTo(this.shortPath, this.speedModifier)) {
                             this.cavedweller.startedMovingChase = true;
                             this.ticksUntilNextPathRecalculation += 4;
                         }
-                    } else if (this.shouldUseClimbPath && !this.mob.getNavigation().moveTo(this.climbPath, this.speedModifier)) {
+                        // If a climb path should be used (assumed here, since that must be the only way to reach this)...
+                    } else if (!this.mob.getNavigation().moveTo(this.climbPath, this.speedModifier)) {
                         this.cavedweller.startedMovingChase = true;
                         this.ticksUntilNextPathRecalculation += 4;
                     }
 
+                    // Update path recalculation timer
                     this.ticksUntilNextPathRecalculation = this.adjustedTickDelay(this.ticksUntilNextPathRecalculation);
 
                 }
 
+                // Attack cooldown timer
                 this.ticksUntilNextAttack = Math.max(this.ticksUntilNextAttack - 1, 0);
+                // If dweller is close enough to attack, and the cooldown timer is 0, then attack
                 this.checkAndPerformAttack(livingentity, d0);
             }
 
+            // Bypass vanilla mob-in-lava behavior
+            // While in lava, calculates a straight line to player and then slides to them until back on solid ground
             if (this.cavedweller.isInLava() && this.cavedweller.getNavigation().getPath().getNextNodeIndex() < this.cavedweller.getNavigation().getPath().getNodeCount()) {
                 System.out.println("ticking lava move");
                 Vec3 a = this.cavedweller.position();
@@ -527,7 +582,6 @@ public class DwellerChaseGoal extends Goal {
                     this.cavedweller.setPos(new Vec3((double)b.getX(), (double)b.getY(), (double)b.getZ()));
                 }
             }
-
         }
     }
 
@@ -545,7 +599,7 @@ public class DwellerChaseGoal extends Goal {
             this.stopClimbing();
         }
 
-        while(this.climbInt < this.maxClimb && !this.cavedweller.level().getBlockState(this.climbPos).isAir()) {
+        while (this.climbInt < this.maxClimb && !this.cavedweller.level().getBlockState(this.climbPos).isAir()) {
             this.climbPos = new BlockPos(this.climbPos.getX(), this.climbPos.getY() + 1, this.climbPos.getZ());
             ++this.climbInt;
         }
@@ -793,8 +847,7 @@ public class DwellerChaseGoal extends Goal {
 
     @Override
     public void tick() {
-        this.cavedweller.squeezeCrawling = this.squeezing;
-        LivingEntity livingentity = null;
+        net.minecraft.world.entity.LivingEntity livingentity = null;
         if (this.cavedweller.getTarget() != null) {
             livingentity = this.mob.getTarget();
         }
@@ -808,20 +861,15 @@ public class DwellerChaseGoal extends Goal {
             }
         }
 
-        SynchedEntityData caveDwellerSynchedEntityData = this.cavedweller.getEntityData();
-        if (caveDwellerSynchedEntityData.get(CaveDwellerEntity.AGGRO_ACCESSOR)) {
-            if (this.squeezing || caveDwellerSynchedEntityData.get(CaveDwellerEntity.SQUEEZING_ACCESSOR) || isStartSqueezingOrSqueezingTickRunning) {
+        net.minecraft.network.syncher.SynchedEntityData cavedwellerEntityData = this.cavedweller.getEntityData();
+        if (cavedwellerEntityData.get(CaveDwellerEntity.AGGRO_ACCESSOR)) {
+            if (this.squeezing) {
                 this.squeezingTick();
-                System.out.println("[DwellerChaseGoal] tick(): this.squeezing == true (" + this.squeezing + ",) CaveDwellerEntity.SQUEEZING_ACCESSOR == true (" + caveDwellerSynchedEntityData.get(CaveDwellerEntity.SQUEEZING_ACCESSOR) + ",) or isStartSqueezingOrSqueezingTickRunning == true (" + isStartSqueezingOrSqueezingTickRunning + "); called squeezingTick()");
                 this.climbing = false;
             } else if (this.climbing) {
                 this.climbingTick();
-                System.out.println("[DwellerChaseGoal] tick(): this.climbing == true; called climbingTick()");
             } else {
-                // For some reason this gets called even when this.squeezing is true, and even when
-                // startSqueezing() is running.
                 this.aggroTick();
-                System.out.println("[DwellerChaseGoal] tick(): this.squeezing && this.climbing == false; called aggroTick()");
             }
         }
 
@@ -830,19 +878,32 @@ public class DwellerChaseGoal extends Goal {
             this.cavedweller.discard();
         }
 
-        this.currentBlock = new BlockPos((int)Math.floor(this.cavedweller.getX()), (int)Math.floor(this.cavedweller.getY()), (int)Math.floor(this.cavedweller.getZ()));
-        if (!this.currentBlock.equals(this.oldBlock)) {
-            for(int dX = -this.torchDestructionRadius; dX < this.torchDestructionRadius + 1; ++dX) {
-                for(int dY = -this.torchDestructionRadius; dY < this.torchDestructionRadius + 1; ++dY) {
-                    for(int dZ = -this.torchDestructionRadius; dZ < this.torchDestructionRadius + 1; ++dZ) {
-                        this.checkBlockForTorch = new BlockPos(this.currentBlock.getX() + dX, this.currentBlock.getY() + dY, this.currentBlock.getZ() + dZ);
-                        if (this.cavedweller.level().getBlockState(this.checkBlockForTorch).is(Blocks.TORCH)) {
+        this.currentBlock = new net.minecraft.core.BlockPos(
+                (int) Math.floor(this.cavedweller.getX()),
+                (int) Math.floor(this.cavedweller.getY()),
+                (int) Math.floor(this.cavedweller.getZ())
+        );
+
+        // Destroy nearby torches
+        // TODO: replace torches with "burnt out" versions like in Bedrock
+        if (this.currentBlock != this.oldBlock) {
+            for (int dX = -this.torchDestructionRadius; dX < this.torchDestructionRadius + 1; ++dX) {
+                for (int dY = -this.torchDestructionRadius; dY < this.torchDestructionRadius + 1; ++dY) {
+                    for (int dZ = -this.torchDestructionRadius; dZ < this.torchDestructionRadius + 1; ++dZ) {
+                        this.checkBlockForTorch = new net.minecraft.core.BlockPos(
+                                this.currentBlock.getX() + dX,
+                                this.currentBlock.getY() + dY,
+                                this.currentBlock.getZ() + dZ
+                        );
+
+                        net.minecraft.world.level.block.state.BlockState blockstate = this.cavedweller.level().getBlockState(this.checkBlockForTorch);
+                        if (blockstate.is(net.minecraft.world.level.block.Blocks.TORCH)) {
                             this.cavedweller.level().destroyBlock(this.checkBlockForTorch, true);
-                        } else if (this.cavedweller.level().getBlockState(this.checkBlockForTorch).is(Blocks.WALL_TORCH)) {
+                        } else if (blockstate.is(net.minecraft.world.level.block.Blocks.WALL_TORCH)) {
                             this.cavedweller.level().destroyBlock(this.checkBlockForTorch, true);
-                        } else if (this.cavedweller.level().getBlockState(this.checkBlockForTorch).is(Blocks.SOUL_TORCH)) {
+                        } else if (blockstate.is(net.minecraft.world.level.block.Blocks.SOUL_TORCH)) {
                             this.cavedweller.level().destroyBlock(this.checkBlockForTorch, true);
-                        } else if (this.cavedweller.level().getBlockState(this.checkBlockForTorch).is(Blocks.SOUL_WALL_TORCH)) {
+                        } else if (blockstate.is(net.minecraft.world.level.block.Blocks.SOUL_WALL_TORCH)) {
                             this.cavedweller.level().destroyBlock(this.checkBlockForTorch, true);
                         }
                     }
@@ -851,7 +912,6 @@ public class DwellerChaseGoal extends Goal {
         }
 
         this.oldBlock = this.currentBlock;
-
     }
 
     public boolean isPlayerLookingTowards() {

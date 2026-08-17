@@ -32,22 +32,9 @@ import software.bernie.geckolib.GeckoLib;
 public class CaveNoise implements ModInitializer {
     public static final String MODID = "cavenoise";
     private static final Logger LOGGER = LogUtils.getLogger();
-    private final boolean USING_FAST_TIMERS = false;
-    private final boolean SPEED_ALL_CLOCKS = true;
-    private final float SPEED_MOD = 5.0F;
     private float currentSpeedMod = 1.0F;
-    private int creepyCaveNoiseStart = 8000;
-    private int creepyCaveNoiseEndBuild = 1000;
-    private float creepyCaveNoiseMinVol = 0.2F;
-    private float creepyCaveNoiseMaxVol = 1.0F;
-    private int vanillaCaveNoiseStartBuild = 15000;
-    private int vanillaCaveNoiseEndBuild = 2000;
-    private int vanillaCaveNoiseStartMinTime = 8000;
-    private int vanillaCaveNoiseStartMaxTime = 10000;
-    private int vanillaCaveNoiseEndMinTime = 4000;
-    private int vanillaCaveNoiseEndMaxTime = 6000;
-    private int stalkNoiseMinTime = 800;
-    private int stalkNoiseMaxTime = 1000;
+    private final int creepyCaveNoiseStart = 8000;
+    private final int vanillaCaveNoiseStartBuild = 15000;
     private int ticksCalmResetMin;
     private int ticksCalmResetMax;
     private int ticksCalmResetCooldown;
@@ -57,12 +44,8 @@ public class CaveNoise implements ModInitializer {
     private int noiseTimer = 0;
     private int stalkNoiseTimer = 0;
     private int vanillaNoiseTimer = 0;
-    private boolean canSpawn = false;
-    private double chanceToSpawnPerTick = 0.001;     // default: 0.005
-    private double chanceToCooldown = 0.6;           // default: 0.4
     private boolean anySpelunkers = false;
     private List<Player> spelunkers = new ArrayList<>();
-    private List<ServerPlayer> players = new ArrayList<>();
 
 
     @Override
@@ -73,13 +56,13 @@ public class CaveNoise implements ModInitializer {
         ModEntityTypes.register();
         ModSounds.register();
         GeckoLib.initialize();
-
         FabricDefaultAttributeRegistry.register(ModEntityTypes.CAVE_DWELLER, CaveDwellerEntity.setAttributes());
 
         ItemGroupEvents.modifyEntriesEvent(CreativeModeTabs.SPAWN_EGGS).register(content -> {
             content.accept(ModItems.CAVE_DWELLER_SPAWN_EGG.get());
         });
 
+        // TODO: reduce spawn rate
         this.ticksCalmResetMin = 15000;         // default: 15000
         this.ticksCalmResetMax = 18000;         // default: 18000
         this.ticksCalmResetCooldown = 16000;    // default: 16000
@@ -88,9 +71,7 @@ public class CaveNoise implements ModInitializer {
         this.calmTimer = 25000;                 // default: 25000
         this.noiseTimer = 4800;                 // default: 4800
 
-        ServerTickEvents.END_SERVER_TICK.register(server -> {
-            this.serverTick(server);
-        });
+        ServerTickEvents.END_SERVER_TICK.register(this::serverTick);
     }
 
     public void onServerStarting() {
@@ -99,8 +80,10 @@ public class CaveNoise implements ModInitializer {
     }
 
     public void serverTick(net.minecraft.server.MinecraftServer server) {
+
         Iterable<Entity> entities = server.getLevel(Level.OVERWORLD).getAllEntities();
         AtomicBoolean dwellerExists = new AtomicBoolean(false);
+
         entities.forEach((entity) -> {
             if (entity instanceof CaveDwellerEntity) {
                 dwellerExists.set(true);
@@ -108,9 +91,12 @@ public class CaveNoise implements ModInitializer {
             }
 
         });
-        this.noiseTimer -= (int)(1.0F * this.currentSpeedMod);
-        this.vanillaNoiseTimer -= (int)(1.0F * this.currentSpeedMod);
-        this.stalkNoiseTimer -= (int)(1.0F * this.currentSpeedMod);
+
+        // Was originally just --this.noiseTimer; vanillaNoiseTimer and stalkNoiseTimer did not exist
+        this.noiseTimer -= (int)(this.currentSpeedMod);
+        this.vanillaNoiseTimer -= (int)(this.currentSpeedMod);
+        this.stalkNoiseTimer -= (int)(this.currentSpeedMod);
+
         if (!dwellerExists.get()) {
             if (this.noiseTimer <= 0 && this.calmTimer <= this.creepyCaveNoiseStart) {
                 for (ServerPlayer player : server.getPlayerList().getPlayers()) {
@@ -128,16 +114,14 @@ public class CaveNoise implements ModInitializer {
             }
         }
 
-        if (this.calmTimer <= 0) {
-            this.canSpawn = true;
-        } else {
-            this.canSpawn = false;
-        }
+        boolean canSpawn = this.calmTimer <= 0;
 
-        this.calmTimer -= (int)(1.0F * this.currentSpeedMod);
-        if (this.canSpawn && !dwellerExists.get()) {
+        this.calmTimer -= (int)(this.currentSpeedMod);
+        if (canSpawn && !dwellerExists.get()) {
             Random rand = new Random();
-            if (rand.nextDouble() <= this.chanceToSpawnPerTick) {
+            // Default: 0.005
+            double chanceToSpawnPerTick = 0.001;
+            if (rand.nextDouble() <= chanceToSpawnPerTick) {
                 this.spelunkers.clear();
                 this.anySpelunkers = false;
 
@@ -146,7 +130,7 @@ public class CaveNoise implements ModInitializer {
                 }
 
                 if (this.anySpelunkers) {
-                    Player victim = (Player) this.spelunkers.get(rand.nextInt(this.spelunkers.size()));
+                    Player victim = this.spelunkers.get(rand.nextInt(this.spelunkers.size()));
                     if (victim instanceof ServerPlayer serverPlayer) {
                         this.playCaveSoundToSpelunkers(serverPlayer);
                         net.minecraft.server.level.ServerLevel playerWorld = serverPlayer.serverLevel();
@@ -177,23 +161,27 @@ public class CaveNoise implements ModInitializer {
     }
 
     public boolean playCaveSoundToSpelunkers(ServerPlayer player) {
-        float a = (float)((this.calmTimer - this.creepyCaveNoiseEndBuild) / (this.creepyCaveNoiseStart - this.creepyCaveNoiseEndBuild));
+        int creepyCaveNoiseEndBuild = 1000;
+        float a = (float)((this.calmTimer - creepyCaveNoiseEndBuild) / (this.creepyCaveNoiseStart - creepyCaveNoiseEndBuild));
         float b = 1.0F - a;
         b = Math.max(0.0F, b);
         b = Math.min(1.0F, b);
-        float vol = this.creepyCaveNoiseMinVol + (this.creepyCaveNoiseMaxVol - this.creepyCaveNoiseMinVol) * b;
+        float creepyCaveNoiseMinVol = 0.2F;
+        float creepyCaveNoiseMaxVol = 1.0F;
+        float vol = creepyCaveNoiseMinVol + (creepyCaveNoiseMaxVol - creepyCaveNoiseMinVol) * b;
         Random rand = new Random();
         if (this.checkIfPlayerIsSpelunker(player) && !player.isSpectator() && !player.isCreative()) {
+            // There are supposed to be 10 sounds total, but I couldn't get the 10th to play via /playsound, so you only get 9, sorry
             SoundEvent selectedSound = switch (rand.nextInt(9)) {
-                case 0 -> (SoundEvent) ModSounds.CAVENOISE_1.get();
-                case 1 -> (SoundEvent) ModSounds.CAVENOISE_2.get();
-                case 2 -> (SoundEvent) ModSounds.CAVENOISE_3.get();
-                case 3 -> (SoundEvent) ModSounds.CAVENOISE_4.get();
-                case 4 -> (SoundEvent) ModSounds.CAVENOISE_5.get();
-                case 5 -> (SoundEvent) ModSounds.CAVENOISE_6.get();
-                case 6 -> (SoundEvent) ModSounds.CAVENOISE_7.get();
-                case 7 -> (SoundEvent) ModSounds.CAVENOISE_8.get();
-                default -> (SoundEvent) ModSounds.CAVENOISE_9.get();
+                case 0 -> ModSounds.CAVENOISE_1.get();
+                case 1 -> ModSounds.CAVENOISE_2.get();
+                case 2 -> ModSounds.CAVENOISE_3.get();
+                case 3 -> ModSounds.CAVENOISE_4.get();
+                case 4 -> ModSounds.CAVENOISE_5.get();
+                case 5 -> ModSounds.CAVENOISE_6.get();
+                case 6 -> ModSounds.CAVENOISE_7.get();
+                case 7 -> ModSounds.CAVENOISE_8.get();
+                default -> ModSounds.CAVENOISE_9.get();
             };
             player.connection.send(new net.minecraft.network.protocol.game.ClientboundSoundPacket(
                     net.minecraft.core.registries.BuiltInRegistries.SOUND_EVENT.wrapAsHolder(selectedSound),
@@ -217,7 +205,6 @@ public class CaveNoise implements ModInitializer {
 
     public boolean playVanillaCaveSoundToSpelunkers(ServerPlayer player) {
         float vol = 1.0F;
-        Random rand = new Random();
         if (this.checkIfPlayerIsSpelunker(player) && !player.isSpectator() && !player.isCreative()) {
             player.connection.send(new net.minecraft.network.protocol.game.ClientboundSoundPacket(
                     net.minecraft.core.registries.BuiltInRegistries.SOUND_EVENT.wrapAsHolder(net.minecraft.sounds.SoundEvents.AMBIENT_CAVE.value()),
@@ -233,12 +220,17 @@ public class CaveNoise implements ModInitializer {
     }
 
     private void resetVanillaNoiseTimer() {
-        float a = (float)((this.calmTimer - this.vanillaCaveNoiseEndBuild) / (this.vanillaCaveNoiseStartBuild - this.vanillaCaveNoiseEndBuild));
+        int vanillaCaveNoiseEndBuild = 2000;
+        float a = (float)((this.calmTimer - vanillaCaveNoiseEndBuild) / (this.vanillaCaveNoiseStartBuild - vanillaCaveNoiseEndBuild));
         a = Math.max(0.0F, a);
         a = Math.min(1.0F, a);
         float b = 1.0F - a;
-        int newMin = Math.round((float)(this.vanillaCaveNoiseEndMinTime - this.vanillaCaveNoiseStartMinTime) * b + (float)this.vanillaCaveNoiseStartMinTime);
-        int newMax = Math.round((float)(this.vanillaCaveNoiseEndMaxTime - this.vanillaCaveNoiseStartMaxTime) * b + (float)this.vanillaCaveNoiseStartMaxTime);
+        int vanillaCaveNoiseStartMinTime = 8000;
+        int vanillaCaveNoiseEndMinTime = 4000;
+        int newMin = Math.round((float)(vanillaCaveNoiseEndMinTime - vanillaCaveNoiseStartMinTime) * b + (float) vanillaCaveNoiseStartMinTime);
+        int vanillaCaveNoiseStartMaxTime = 10000;
+        int vanillaCaveNoiseEndMaxTime = 6000;
+        int newMax = Math.round((float)(vanillaCaveNoiseEndMaxTime - vanillaCaveNoiseStartMaxTime) * b + (float) vanillaCaveNoiseStartMaxTime);
         Random rand = new Random();
         this.vanillaNoiseTimer = rand.nextInt(newMax - newMin) + newMin;
     }
@@ -250,11 +242,11 @@ public class CaveNoise implements ModInitializer {
         double targetZ = player.getZ() + (double)(-25 + rand.nextInt(50));
         if (this.checkIfPlayerIsSpelunker(player) && !player.isSpectator() && !player.isCreative()) {
             SoundEvent selectedSound = switch (rand.nextInt(5)) {
-                case 0 -> (SoundEvent) ModSounds.DWELLER_STALK_1.get();
-                case 1 -> (SoundEvent) ModSounds.DWELLER_STALK_2.get();
-                case 2 -> (SoundEvent) ModSounds.DWELLER_STALK_3.get();
-                case 3 -> (SoundEvent) ModSounds.DWELLER_STALK_4.get();
-                default -> (SoundEvent) ModSounds.DWELLER_STALK_5.get();
+                case 0 -> ModSounds.DWELLER_STALK_1.get();
+                case 1 -> ModSounds.DWELLER_STALK_2.get();
+                case 2 -> ModSounds.DWELLER_STALK_3.get();
+                case 3 -> ModSounds.DWELLER_STALK_4.get();
+                default -> ModSounds.DWELLER_STALK_5.get();
             };
             player.connection.send(new net.minecraft.network.protocol.game.ClientboundSoundPacket(
                     net.minecraft.core.registries.BuiltInRegistries.SOUND_EVENT.wrapAsHolder(selectedSound),
@@ -271,7 +263,9 @@ public class CaveNoise implements ModInitializer {
 
     private void resetStalkNoiseTimer() {
         Random rand = new Random();
-        this.stalkNoiseTimer = this.stalkNoiseMinTime + rand.nextInt(this.stalkNoiseMaxTime - this.stalkNoiseMinTime);
+        int stalkNoiseMinTime = 800;
+        int stalkNoiseMaxTime = 1000;
+        this.stalkNoiseTimer = stalkNoiseMinTime + rand.nextInt(stalkNoiseMaxTime - stalkNoiseMinTime);
     }
 
     public boolean checkIfPlayerIsSpelunker(Player player) {
@@ -287,7 +281,9 @@ public class CaveNoise implements ModInitializer {
     private void resetCalmTimer() {
         Random rand = new Random();
         this.calmTimer = this.ticksCalmResetMin + rand.nextInt(this.ticksCalmResetMax);
-        if (rand.nextDouble() <= this.chanceToCooldown) {
+        // Default: 0.4
+        double chanceToCooldown = 0.6;
+        if (rand.nextDouble() <= chanceToCooldown) {
             this.calmTimer = this.ticksCalmResetCooldown + rand.nextInt(this.ticksCalmResetCooldown);
         }
 

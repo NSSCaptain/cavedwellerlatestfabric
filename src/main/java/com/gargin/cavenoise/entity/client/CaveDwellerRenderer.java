@@ -82,7 +82,7 @@ public class CaveDwellerRenderer extends GeoEntityRenderer<CaveDwellerEntity> {
                                float red, float green, float blue, float alpha) {
         float usedAlpha;
         // Dweller is always 15% transparent
-        // TODO:  (except for the head)
+        // TODO: (except for the head)
         float defaultAlpha = 0.85F;
 
         if (isReRender) {

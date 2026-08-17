@@ -57,6 +57,7 @@ public class ModEntityTypes {
             if (!world.isClientSide() && player.getItemInHand(hand).getItem() instanceof SpawnEggItem spawnEgg) {
                 if (spawnEgg.getType(null) == CAVE_DWELLER) {
 
+                    // Interaction fix not present on Bedrock
                     // Checks if you're just trying to interact with something first
                     // Also prevents the "Can not spawn another Cave Dweller" messages from appearing if so
                     BlockState state = world.getBlockState(hitResult.getBlockPos());
