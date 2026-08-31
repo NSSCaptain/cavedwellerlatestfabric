@@ -18,6 +18,17 @@ No. I started this whole project because the latest version of the Gargin Cave D
 
 Since most of the assets used are not my own, I don't know the extent to which I can upload this. If I were to upload it anywhere, it'd be on Modrinth. Furthermore, I do not support CurseForge, since Curse is owned by an Israeli software company (Overwolf).
 
+## Plans
+
+- Add "peeking" behaviors
+- Add "catching up" behavior, for when player is too far away
+- Add burnt-out torch mechanic (currently breaks torches)
+- Add ability to remove helmet/held item while attacking
+- Add giving slowness when it's struck before chasing begins
+- Add Dwellings (MAYBE)
+- Add Moth (MAYBE)
+- And more...
+
 ## Credits
 
 Cave Dweller Model: https://modrinth.com/resourcepack/modern-cave-dweller
