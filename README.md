@@ -1,4 +1,4 @@
-# Fabric 1.20.1 Cave Dweller (Bedrock port) by The Captain
+# Fabric 1.20.1 Bedrock Cave Dweller by The Captain
 
 ## Full disclosure
 
