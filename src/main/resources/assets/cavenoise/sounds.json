@@ -77,6 +77,30 @@
       "cavenoise:step_4"
     ]
   },
+  "transition_1": {
+    "subtitle": "§kCave_Dweller§r's jaw cracks",
+    "sounds": [
+      "cavenoise:transition_1"
+    ]
+  },
+  "transition_2": {
+    "subtitle": "§kCave_Dweller§r's jaw cracks",
+    "sounds": [
+      "cavenoise:transition_2"
+    ]
+  },
+  "transition_3": {
+    "subtitle": "§kCave_Dweller§r's jaw cracks",
+    "sounds": [
+      "cavenoise:transition_3"
+    ]
+  },
+  "transition_4": {
+    "subtitle": "§kCave_Dweller§r's jaw cracks",
+    "sounds": [
+      "cavenoise:transition_4"
+    ]
+  },
   "chase_1": {
     "subtitle": "§kCave_Dweller§r screeches",
     "sounds": [
@@ -101,16 +125,40 @@
       "cavenoise:chase_4"
     ]
   },
-  "flee_1": {
-    "subtitle": "sound.cavenoise.flee",
+  "heartbeat": {
+    "subtitle": "§kCave_Dweller§r's heart beats",
     "sounds": [
-      "cavenoise:flee_1"
+      "cavenoise:heartbeat"
     ]
   },
-  "flee_2": {
-    "subtitle": "sound.cavenoise.flee",
+  "idle_1": {
+    "subtitle": "§kCave_Dweller§r breathes",
     "sounds": [
-      "cavenoise:flee_2"
+      "cavenoise:idle_1"
+    ]
+  },
+    "idle_2": {
+    "subtitle": "§kCave_Dweller§r breathes",
+    "sounds": [
+      "cavenoise:idle_2"
+    ]
+  },
+  "breathing_1": {
+    "subtitle": "§kCave_Dweller§r huffs",
+    "sounds": [
+      "cavenoise:breathing_1"
+    ]
+  },
+    "breathing_2": {
+    "subtitle": "§kCave_Dweller§r huffs",
+    "sounds": [
+      "cavenoise:breathing_2"
+    ]
+  },
+    "breathing_3": {
+    "subtitle": "§kCave_Dweller§r huffs",
+    "sounds": [
+      "cavenoise:breathing_3"
     ]
   },
   "disappear": {
@@ -192,31 +240,31 @@
     ]
   },
   "stalk_1": {
-    "subtitle": "Something draws near",
+    "subtitle": "Something draws close",
     "sounds": [
       "cavenoise:stalk_1"
     ]
   },
   "stalk_2": {
-    "subtitle": "Something draws near",
+    "subtitle": "Something draws close",
     "sounds": [
       "cavenoise:stalk_2"
     ]
   },
   "stalk_3": {
-    "subtitle": "Something draws near",
+    "subtitle": "Something draws close",
     "sounds": [
       "cavenoise:stalk_3"
     ]
   },
   "stalk_4": {
-    "subtitle": "Something draws near",
+    "subtitle": "Something draws close",
     "sounds": [
       "cavenoise:stalk_4"
     ]
   },
   "stalk_5": {
-    "subtitle": "Something draws near",
+    "subtitle": "Something draws close",
     "sounds": [
       "cavenoise:stalk_5"
     ]
@@ -243,30 +291,6 @@
     "subtitle": "§kCave_Dweller§r climbs",
     "sounds": [
       "cavenoise:climb_4"
-    ]
-  },
-  "climb_5": {
-    "subtitle": "§kCave_Dweller§r climbs",
-    "sounds": [
-      "cavenoise:climb_5"
-    ]
-  },
-  "climb_6": {
-    "subtitle": "§kCave_Dweller§r climbs",
-    "sounds": [
-      "cavenoise:climb_6"
-    ]
-  },
-  "climb_7": {
-    "subtitle": "§kCave_Dweller§r climbs",
-    "sounds": [
-      "cavenoise:climb_7"
-    ]
-  },
-  "climb_8": {
-    "subtitle": "§kCave_Dweller§r climbs",
-    "sounds": [
-      "cavenoise:climb_8"
     ]
   }
 }

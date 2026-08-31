@@ -1,13 +1,14 @@
 {
-	"required": false,
-	"package": "com.gargin.cavedweller.mixin",
-	"compatibilityLevel": "JAVA_17",
-	"mixins": [
-	],
-	"injectors": {
-		"defaultRequire": 1
-	},
-	"overwrites": {
-		"requireAnnotations": true
-	}
+  "required": true,
+  "package": "com.gargin.cavenoise.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "mixins": [
+    "MixinGroundPathNavigation",
+    "MixinLivingEntity",
+    "MixinServerWorld"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "refmap": "cavedweller-refmap.json"
 }
