@@ -35,10 +35,10 @@ public abstract class MixinServerWorld {
     java.util.Map<java.util.UUID, PlayerTimerData> playerTimerLedger = new java.util.HashMap<>();
     private final Random random = new Random();
     private boolean dwellerExistsFlag;
-    private int spawnTickCounter = 0;
     private boolean debug = CaveNoise.CONFIG.DEBUG();
     private int scanTicks = 0;
     private int randomlySelectedBrightnessLevel;
+    private boolean shouldTickTimers;
     // Scoreboard
     private String calmTimerMinsAndSecs;
     private String vanillaNoiseTimerMinsAndSecs;
@@ -56,7 +56,6 @@ public abstract class MixinServerWorld {
     private String timerInactive = "§c§lINACTIVE";
     private int dwellerAliveTimer = 0;
     private boolean isDwellerCurrentlyAggro = false;
-
     private Enum currentGoal;
 
     public MixinServerWorld() {
@@ -71,6 +70,8 @@ public abstract class MixinServerWorld {
         private final net.minecraft.util.RandomSource random = net.minecraft.util.RandomSource.create();
         public int calmTimer;
         public int gracePeriod;
+        public int gracePeriodMax;
+        public int gracePeriodTimer;
         public int vanillaCaveNoiseTimer;
         public int dwellerCaveNoiseTimer;
         public int stalkNoiseTimer;
@@ -95,11 +96,11 @@ public abstract class MixinServerWorld {
         }
 
         /// Reset timers
-        public void resetAll(ServerLevel overworld, boolean dwellerExistsFlag) {
+        public void resetAll(ServerLevel overworld, boolean dwellerExists) {
             this.resetCalmTimer();
             this.caveNoiseTimerCheck();
 
-            if (dwellerExistsFlag) {
+            if (dwellerExists) {
                 this.resetStalkNoiseTimer();
             } else {
                 this.resetSpawnAttemptTimer();
@@ -330,7 +331,6 @@ public abstract class MixinServerWorld {
 
     @Inject(method = "tick", at = @At("TAIL"))
     public void tickServer(BooleanSupplier booleanSupplier, CallbackInfo ci) {
-        // FIXED: Convert 'this' directly into your Level instance context
         ServerLevel overworld = (ServerLevel) (Object) this;
         if (overworld == null) {
             return;
@@ -345,8 +345,6 @@ public abstract class MixinServerWorld {
             doReload = false;
         }
 
-        this.dwellerExistsFlag = false;
-
         Iterable<Entity> entities = overworld.getAllEntities();
         java.util.concurrent.atomic.AtomicBoolean dwellerExists = new java.util.concurrent.atomic.AtomicBoolean(false);
         for (Entity entity : entities) {
@@ -356,9 +354,12 @@ public abstract class MixinServerWorld {
             }
         }
 
+        this.dwellerExistsFlag = dwellerExists.get();
+
         // Step 1: Scan every 3 seconds for spelunkers, then puts them on a list
         this.scanTicks++;
-        if (this.scanTicks >= 60) {
+
+        if (this.scanTicks >= 60 || this.playerTimerLedger.isEmpty()) {
             this.scanTicks = 0;
             this.spelunkers.clear();
             overworld.players().forEach(this::listSpelunkers);
@@ -379,7 +380,6 @@ public abstract class MixinServerWorld {
             java.util.UUID playerUuid = entry.getKey();
             PlayerTimerData data = entry.getValue();
 
-            // Verify if this specific tracked person is actively a spelunker right now
             boolean isCurrentlySpelunker = false;
             for (ServerPlayer p : this.spelunkers) {
                 if (p.getUUID().equals(playerUuid)) {
@@ -388,16 +388,45 @@ public abstract class MixinServerWorld {
                 }
             }
 
-            if (isCurrentlySpelunker) {
-                // Refresh their personal grace pool allotment window
-                data.gracePeriod = Utils.secondsToTicks(CaveNoise.CONFIG.GRACE_PERIOD_BEFORE_RESET());
+            int pauseThreshold = Utils.secondsToTicks(30);
+            boolean isCalmTimerAtPauseThreshold = (data.calmTimer > 0 && data.calmTimer <= pauseThreshold);
 
-                // If no dweller is active globally, tick down their packet numbers
-                if (!dwellerExists.get()) {
-                    --data.calmTimer;
-                    --data.dwellerCaveNoiseTimer;
-                    --data.vanillaCaveNoiseTimer;
-                    --data.stalkNoiseTimer;
+            if (data.gracePeriod < data.gracePeriodMax) {
+                if (isCalmTimerAtPauseThreshold) {
+                    this.shouldTickTimers = false;
+                } else {
+                    this.shouldTickTimers = (overworld.getGameTime() % 2 == 0);
+                }
+            } else {
+                this.shouldTickTimers = true;
+            }
+
+            if (this.shouldTickTimers && !dwellerExists.get()) {
+                --data.calmTimer;
+                --data.dwellerCaveNoiseTimer;
+                --data.vanillaCaveNoiseTimer;
+            }
+            if (this.shouldTickTimers && dwellerExists.get() && data.calmTimer <= 0) {
+                --data.stalkNoiseTimer;
+            }
+
+            int gracePeriodMaxIncreaseBy = Utils.secondsToTicks(10);
+            int gracePeriodTimerMax = Utils.secondsToTicks(5);
+
+            if (isCurrentlySpelunker) {
+                if (data.activePhase <= 2) {
+                    data.gracePeriodMax = Utils.secondsToTicks(CaveNoise.CONFIG.GRACE_PERIOD_BEFORE_RESET());
+                    data.gracePeriod = data.gracePeriodMax;
+                    data.gracePeriodTimer = gracePeriodTimerMax;
+                } else {
+                    if (data.gracePeriodTimer > 0) {
+                        --data.gracePeriodTimer;
+                    }
+
+                    if (data.gracePeriodTimer <= 0) {
+                        data.gracePeriodMax += gracePeriodMaxIncreaseBy;
+                        data.gracePeriodTimer = gracePeriodTimerMax;
+                    }
                 }
 
                 if (!dwellerExists.get() && data.calmTimer > 0) {
@@ -449,15 +478,9 @@ public abstract class MixinServerWorld {
                 }
 
                 if (!dwellerExists.get() && data.calmTimer > 0 && data.activePhase < 3) {
-                    // Check if the tracker was previously exhausted before updating
                     if (data.spawnAttemptTimer <= 20) {
                         data.resetSpawnAttemptTimer();
                     }
-                }
-
-                boolean canSpawn = data.calmTimer <= 0 && data.spawnAttemptTimer > 0;
-                if (data.calmTimer < 0) {
-                    data.calmTimer = 0;
                 }
 
                 switch (data.activePhase) {
@@ -500,6 +523,14 @@ public abstract class MixinServerWorld {
                         data.currentlyPlayingNoise = false;
                     }
                     default -> {
+                        // TODO: this is kinda jank ngl. I gotta change this setup
+                        if (data.calmTimer < -1) {
+                            data.calmTimer = -1;
+                        }
+                        if (data.spawnAttemptTimer < 0) {
+                            iterator.remove();
+                        }
+
                         data.vanillaCaveNoiseTimer = -1;
                         data.dwellerCaveNoiseTimer = -1;
                         data.currentlyPlayingNoise = false;
@@ -509,33 +540,34 @@ public abstract class MixinServerWorld {
                 if (data.calmTimer <= 0 && !dwellerExists.get()) {
                     --data.spawnAttemptTimer;
 
-                    if (data.spawnAttemptTimer <= 0) {
+                    if (data.spawnAttemptTimer == 0) {
                         ServerPlayer targetPlayer = (ServerPlayer) overworld.getPlayerByUUID(playerUuid);
+
                         if (targetPlayer != null && !data.currentlyPlayingNoise) {
                             data.currentlyPlayingNoise = true;
                             this.playStalkNoiseToSpelunkers(targetPlayer, data);
                             CaveDwellerEntity caveDweller = new CaveDwellerEntity(ModEntityTypes.CAVEDWELLER, overworld);
                             Vec3 spawnPos = caveDweller.generatePos(targetPlayer);
+
                             if (spawnPos != null) {
                                 caveDweller.moveTo(caveDweller.generatePos(targetPlayer));
-                                boolean success = overworld.addFreshEntity(caveDweller);
                                 caveDweller.setInvisible(true);
-                                System.out.println("SPAWNED DWELLER FOR PLAYER: " + targetPlayer.getGameProfile().getName() + " | SUCCESS: " + success);
                             }
-
-                            // Safely drops this specific player profile from the ledger map loop
-                            iterator.remove();
                         }
                     }
                 }
+            // If player is not a spelunker...
             } else {
-                // Player stepped into torchlight or logged out; tick down their grace window
                 data.gracePeriod--;
-
                 data.ticksUntilNextPhase = data.gracePeriod;
-                if (data.gracePeriod <= 0) {
-                    iterator.remove();
-                }
+            }
+
+            if (data.calmTimer <= 0) {
+                data.calmTimer = -1;
+            }
+
+            if (data.gracePeriod <= 0) {
+                iterator.remove();
             }
 
             this.phase1StartPercent = data.phase1StartPercentDecimal * 100;
@@ -559,33 +591,37 @@ public abstract class MixinServerWorld {
     // Scoreboard
     private void resetScoreboard(ServerLevel level) {
         net.minecraft.world.scores.Scoreboard scoreboard = level.getScoreboard();
-        net.minecraft.world.scores.Objective objective = scoreboard.getObjective("§dweller_debug");
-        
+        // Had to delete the one with the section sign (§) because apparently Minecraft doesn't like that symbol being in the chat
+        net.minecraft.world.scores.Objective objectiveOld = scoreboard.getObjective("§dweller_debug");
+        net.minecraft.world.scores.Objective objective = scoreboard.getObjective("dweller_debug");
+
         if (this.debug) {
             System.out.println("Debug is enabled!");
             System.out.println("Enjoy the cool scoreboard!");
-            if (scoreboard.hasObjective("§dweller_debug")) {
+
+            if (objectiveOld != null) {
+                scoreboard.removeObjective(objectiveOld);
+            }
+            if (objective != null) {
                 scoreboard.removeObjective(objective);
             }
 
-            if (!scoreboard.hasObjective("§dweller_debug")) {
+            if (!scoreboard.hasObjective("dweller_debug")) {
                 scoreboard.addObjective(
-                        "§dweller_debug",
+                        "dweller_debug",
                         net.minecraft.world.scores.criteria.ObjectiveCriteria.DUMMY,
                         net.minecraft.network.chat.Component.literal("§e§l[DEBUG]§r MixinServerWorld Info"),
                         net.minecraft.world.scores.criteria.ObjectiveCriteria.RenderType.INTEGER
                 );
             }
 
-            objective = scoreboard.getObjective("§dweller_debug");
+            objective = scoreboard.getObjective("dweller_debug");
             scoreboard.setDisplayObjective(net.minecraft.world.scores.Scoreboard.DISPLAY_SLOT_SIDEBAR, objective);
         } else {
             System.out.println("Debug is not enabled!");
-            if (scoreboard.hasObjective("§dweller_debug")) {
+            if (scoreboard.hasObjective("dweller_debug") || scoreboard.hasObjective("§dweller_debug")) {
                 scoreboard.removeObjective(objective);
             }
-            
-            return;
         }
     }
 
@@ -598,38 +634,39 @@ public abstract class MixinServerWorld {
             gracePeriodSB = "§2Grace period: §6" + Utils.ticksToMinutesAndSeconds(data.gracePeriod);
         }
 
-        String calmTimerMaxSecondsSB = "§fCalm Timer Max: §6" + Utils.ticksToSeconds(data.calmTimerMax) + "s§f (§6" + data.calmTimerMax + "t§f)";
-        String calmTimerTicksSB = "§fCalm Timer (ticks): §6" + data.calmTimer + "t§r";
-        String calmTimerMinutesSecondsSB = "§fCalm Timer (minutes): §6" + Utils.ticksToMinutesAndSeconds(data.calmTimer);
+        String calmTimerMaxPossibleSecondsSB = "§fCalm Timer Max Possible: §6" + Utils.ticksToSeconds(data.calmTimerMax) + "s§f (§6" + data.calmTimerMax + "t§f)";
+
+        int localCalmSecs = data.calmTimer < 0 ? -1 : data.calmTimer / 20;
+        String calmTimerTicksSB = "§fCalm Timer (ticks): §6" + (localCalmSecs == -1? this.timerInactive : data.calmTimer + "t§r");
+        String calmTimerMinutesSecondsSB = "§fCalm Timer (minutes): §6" + (localCalmSecs == -1? this.timerInactive : Utils.ticksToMinutesAndSeconds(data.calmTimer));
+
         String currentActivePhaseSB = "§fActive phase: " + this.currentActivePhaseName;
 
         String phase1StartSB = "§aPhase 1 §fstarts at §6" + this.phase1StartPercent + "%§f, or at §6" + this.phase1StartMinsAndSecs;
 
         int localVanillaSecs = data.vanillaCaveNoiseTimer < 0 ? -1 : data.vanillaCaveNoiseTimer / 20;
-        String vanillaTimerMinutesSecondsSB = "§aVanilla Cave Noise Timer (minutes): §6" +
-                (localVanillaSecs == -1 ? this.timerInactive : Utils.ticksToMinutesAndSeconds(data.vanillaCaveNoiseTimer));
+        String vanillaTimerMinutesSecondsSB = "§aVanilla Cave Noise Timer (minutes): §6" + (localVanillaSecs == -1 ? this.timerInactive : Utils.ticksToMinutesAndSeconds(data.vanillaCaveNoiseTimer));
 
         String phase2StartSB = "§bPhase 2 §fstarts at §6" + this.phase2StartPercent + "%§f, or at §6" + this.phase2StartMinsAndSecs;
 
         int localDwellerSecs = data.dwellerCaveNoiseTimer < 0 ? -1 : data.dwellerCaveNoiseTimer / 20;
-        String dwellerTimerMinutesSecondsSB = "§bDweller Cave Noise Timer (minutes): §6" +
-                (localDwellerSecs == -1 ? this.timerInactive : Utils.ticksToMinutesAndSeconds(data.dwellerCaveNoiseTimer));
+        String dwellerTimerMinutesSecondsSB = "§bDweller Cave Noise Timer (minutes): §6" + (localDwellerSecs == -1 ? this.timerInactive : Utils.ticksToMinutesAndSeconds(data.dwellerCaveNoiseTimer));
 
         String dwellerExistsSB = "§6Dweller exists? " + (this.dwellerExistsFlag ? "§4YES§r" : "§cNO§r");
         String spawnAttemptTimerSecondsSB = "§eSpawn Attempt Timer (seconds): §6" + Math.max(0, data.spawnAttemptTimer / 20) + "s§r";
-        String dwellerLifetimeSB = "§4Dweller currently exists for §6" + Utils.ticksToMinutesAndSeconds(this.dwellerAliveTimer) + "§4 more";
-        String stalkNoiseTimerTicksSB = "§4Stalk Noise Timer (ticks): §6" + (data.stalkNoiseTimer <= 0 ? this.timerInactive : data.stalkNoiseTimer + "t§r");
+        String lifetimeText = Utils.ticksToMinutesAndSeconds(this.dwellerAliveTimer);
+        String dwellerLifetimeSB = "§4Dweller currently exists for §6" + (this.dwellerAliveTimer <= 0 ? "0:00" : lifetimeText) + "§4 more";
 
         int localStalkSecs = Math.max(0, data.stalkNoiseTimer / 20);
-        String stalkNoiseTimerMinutesSecondsSB = "§4Stalk Noise Timer (minutes): §6" +
-                (localStalkSecs <= 0 ? this.timerInactive : Utils.ticksToMinutesAndSeconds(data.stalkNoiseTimer));
+        String stalkNoiseTimerMinutesSecondsSB = "§4Stalk Noise Timer (minutes): §6" + (localStalkSecs <= 0 ? this.timerInactive : Utils.ticksToMinutesAndSeconds(data.stalkNoiseTimer));
 
-        String dwellerCurrentGoalSB = "§4Current goal: §6" + this.currentGoal;
+        String goalText = this.currentGoal != null ? this.currentGoal.name() : "NONE";
+        String dwellerCurrentGoalSB = "§4Current goal: §6" + goalText;
 
         if (this.dwellerExistsFlag) {
             return new String[]{
                     gracePeriodSB,
-                    calmTimerMaxSecondsSB,
+                    calmTimerMaxPossibleSecondsSB,
                     calmTimerTicksSB,
                     calmTimerMinutesSecondsSB,
                     currentActivePhaseSB,
@@ -639,14 +676,13 @@ public abstract class MixinServerWorld {
                     dwellerTimerMinutesSecondsSB,
                     dwellerExistsSB,
                     dwellerLifetimeSB,
-                    stalkNoiseTimerTicksSB,
                     stalkNoiseTimerMinutesSecondsSB,
                     dwellerCurrentGoalSB
             };
         } else if (!this.dwellerExistsFlag && data.activePhase == 3) {
             return new String[]{
                     gracePeriodSB,
-                    calmTimerMaxSecondsSB,
+                    calmTimerMaxPossibleSecondsSB,
                     calmTimerTicksSB,
                     calmTimerMinutesSecondsSB,
                     currentActivePhaseSB,
@@ -660,7 +696,7 @@ public abstract class MixinServerWorld {
         } else {
             return new String[]{
                     gracePeriodSB,
-                    calmTimerMaxSecondsSB,
+                    calmTimerMaxPossibleSecondsSB,
                     calmTimerTicksSB,
                     calmTimerMinutesSecondsSB,
                     currentActivePhaseSB,
@@ -676,19 +712,28 @@ public abstract class MixinServerWorld {
     private void updateScoreboardDisplay(ServerLevel level, PlayerTimerData data) {
         if (this.debug) {
             net.minecraft.world.scores.Scoreboard scoreboard = level.getScoreboard();
-            net.minecraft.world.scores.Objective objective = scoreboard.getObjective("§dweller_debug");
+            net.minecraft.world.scores.Objective objective = scoreboard.getObjective("dweller_debug");
 
             if (objective == null) {
                 return;
             }
 
-            for (String player : new ArrayList<>(scoreboard.getTrackedPlayers())) {
-                if (player.startsWith("§") || player.contains("Remaining") || player.contains("Timer") || player.contains("Active")) {
-                    scoreboard.resetPlayerScore(player, objective);
-                }
+            if (scoreboard.getDisplayObjective(net.minecraft.world.scores.Scoreboard.DISPLAY_SLOT_SIDEBAR) != objective) {
+                scoreboard.setDisplayObjective(net.minecraft.world.scores.Scoreboard.DISPLAY_SLOT_SIDEBAR, objective);
             }
 
             String[] diagnosticLines = this.getScoreboardText(data);
+
+            if (diagnosticLines == null || diagnosticLines.length == 0) {
+                scoreboard.getOrCreatePlayerScore("No diagnostics available.", objective).setScore(0);
+                return;
+            }
+
+            for (String scoreHolder : new java.util.ArrayList<>(scoreboard.getTrackedPlayers())) {
+                if (scoreboard.hasPlayerScore(scoreHolder, objective)) {
+                    scoreboard.resetPlayerScore(scoreHolder, objective);
+                }
+            }
 
             for (int i = 0; i < diagnosticLines.length; i++) {
                 String lineText = diagnosticLines[i];
@@ -696,8 +741,6 @@ public abstract class MixinServerWorld {
 
                 scoreboard.getOrCreatePlayerScore(lineText, objective).setScore(positionScore);
             }
-        } else {
-            return;
         }
     }
 

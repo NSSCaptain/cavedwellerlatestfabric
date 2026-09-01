@@ -4,7 +4,6 @@ import io.wispforest.owo.config.annotation.Config;
 import io.wispforest.owo.config.annotation.Modmenu;
 import io.wispforest.owo.config.annotation.RangeConstraint;
 import io.wispforest.owo.config.annotation.RestartRequired;
-import org.jetbrains.annotations.Range;
 
 @Modmenu(
         modId = "cavenoise"
@@ -13,24 +12,6 @@ import org.jetbrains.annotations.Range;
         name = "cave-dweller-config",
         wrapperName = "CaveDwellerConfiguration"
 )
-/*
-    currentSpeedMod = 5.0F;
-    ticksCalmResetMin = 15000;
-    ticksCalmResetMax = 18000;
-    ticksCalmResetCooldown = 16000;
-    dwellerCaveNoiseResetMin = 1600;
-    dwellerCaveNoiseResetMax = 2000;
-    calmTimer = 25000;
-    dwellerCaveNoiseTimer = 4800;
-    stalkNoiseMinTime = 800;
-    stalkNoiseMaxTime = 1000;
-    vanillaCaveNoiseStartMinTime = 8000;
-    vanillaCaveNoiseStartMaxTime = 10000;
-    vanillaCaveNoiseEndMinTime = 4000;
-    vanillaCaveNoiseEndMaxTime = 6000;
-    chanceOfSpawningAsStalker = 0.6F;
-*/
-// above numbers are in ticks
 // config numbers are in seconds
 // ticks / 20 = seconds
 // seconds * 20 = ticks
@@ -39,21 +20,18 @@ public class ModConfigModel {
     /// Misc.
     // Give player darkness during chase?
     public boolean GIVE_DARKNESS = false; // default: false
-    // Allow riding?
+    // Allow riding(?)
     // TODO: Doesn't work?
     public boolean ALLOW_RIDING_IN = false; // default: false
     // Can climb walls?
     public boolean CAN_CLIMB = true; // default: true
-    // Can see + attack invisible players
+    // Can see + attack invisible players?
     public boolean TARGET_INVISIBLE = false; // default: false
     // Disappear if target is no longer valid?
+    // Used only once, I think
     public boolean DISAPPEAR = false; // default: false
     // Debug stuff
     public boolean DEBUG = false; // default: false
-
-    /// Spawn chance(s)
-    /// Unused
-    //public double CHANCE_TO_SPAWN_AS_STALKER = 0.8F; // default: 0.8
 
     /// Timers
     // Calm timer
@@ -66,26 +44,26 @@ public class ModConfigModel {
             min = (double)240,
             max = (double)19998
     )
-    public int RESET_CALM_MAX = 700; //default: 700
+    public int RESET_CALM_MAX = 600; //default: 600
     @RangeConstraint(
             min = (double)0.0,
             max = (double)1.0
     )
-    public double RESET_CALM_COOLDOWN_CHANCE = 0.2; // default: 0.1
+    public double RESET_CALM_COOLDOWN_CHANCE = 0.2; // default: 0.2
 
     // Vanilla cave noise timer
     @RangeConstraint(
             min = (double)30,
             max = (double)19998
     )
-    public int RESET_VANILLA_CAVE_NOISE_START_MIN = 60; // default: 400
+    public int RESET_VANILLA_CAVE_NOISE_START_MIN = 60; // default: 60
 
     // Cave Dweller noise timer
     @RangeConstraint(
             min = (double)30,
             max = (double)19998
     )
-    public int RESET_DWELLER_CAVE_NOISE_MIN = 60; // default: 500
+    public int RESET_DWELLER_CAVE_NOISE_MIN = 60; // default: 60
 
     // Stalk noise timer
     @RangeConstraint(
@@ -94,6 +72,9 @@ public class ModConfigModel {
     )
     public int RESET_STALK_NOISE_MIN = 30; // default: 30
 
+    // Grace period
+    public int GRACE_PERIOD_BEFORE_RESET = 180; // default: 180
+
     /// Spawning
     // Removed range constraint to account for worlds with custom heights
     // Extra spawn check added in CaveDwellerEntity to prevent issues
@@ -101,7 +82,6 @@ public class ModConfigModel {
     public boolean ALLOW_SURFACE_SPAWN = false; // default: false
     public int SKY_LIGHT_LEVEL = 0; // default: 0
     public int BLOCK_LIGHT_LEVEL = 0; // default: 0
-    public int GRACE_PERIOD_BEFORE_RESET = 120; // default: 120
 
     /// Spotted range
     @RestartRequired

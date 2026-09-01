@@ -214,7 +214,6 @@ public class CaveDwellerEntity extends Monster implements GeoEntity {
         this.noPhysics = false;
         this.setNoGravity(false);
         this.setInStandoff(false);
-        this.debug = CaveNoise.CONFIG.DEBUG();
 
         ItemStack enchantedBoots = new ItemStack(Items.NETHERITE_BOOTS);
         enchantedBoots.enchant(Enchantments.DEPTH_STRIDER, 3);
