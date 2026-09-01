@@ -2,7 +2,7 @@
 
 ## Full disclosure
 
-While about 70-80% of this project is a mix between Gargin's original code and the open-source fabric port, this project has been *heavily* assisted with Gemini. Of course, I haven't just copy-pasted its code and done nothing with it. I've been learning Java modding through this whole process and have been double-checking that all the provided code is functional, and I would not promote this if I didn't playtest it thoroughly. The parts it has helped out with it primarily the math, rendering, and multiplayer code. Since I've been working on this solo, I have no idea if the multiplayer code works as expected. It all works in single player though, at the very least.
+While about 70-80% of this project is a mix between Gargin's original code and the open-source fabric port, this project has been *heavily* assisted with Gemini. Of course, I haven't just copy-pasted its code and done nothing with it. I've been learning Java modding through this whole process and have been double-checking that all the provided code is functional, and I would not promote this if I didn't playtest it thoroughly. The parts it has helped out with is primarily the math, rendering, and multiplayer code. Since I've been working on this solo, I have no idea if the multiplayer code works as expected. It all works in single player though, at the very least.
 
 If Gargin requests that I take this down, I will, full-stop.
 
