@@ -1,0 +1,80 @@
+{
+  "item.cave_dweller.cave_dweller_spawn_egg": "Cave Dweller Spawn Egg",
+  "entity.cave_dweller.cave_dweller": "Cave Dweller",
+  "text.config.cave_dweller_config.title": "Cave Dweller Settings",
+
+  "text.config.cave_dweller_config.option.GIVE_DARKNESS": "Give darkness",
+  "text.config.cave_dweller_config.option.GIVE_DARKNESS.tooltip": "Whether or not to give darkness when it's chasing.",
+
+  "text.config.cave_dweller_config.option.DISAPPEAR": "Disappear",
+  "text.config.cave_dweller_config.option.DISAPPEAR.tooltip": "Whether or not to disappear when target becomes invalid.",
+
+  "text.config.cave_dweller_config.option.DEBUG": "Debug mode",
+  "text.config.cave_dweller_config.option.DEBUG.tooltip": "SPOILERS! Enables the following:\nA scoreboard showing dweller data/timers\nSlimes with glowing spawning at every spawn attempt\nDweller has glowing applied upon spawning",
+
+  "text.config.cave_dweller_config.option.RESET_CALM_MIN": "Minimum calm time",
+  "text.config.cave_dweller_config.option.RESET_CALM_MIN.tooltip": "Minimum time before spawning in.",
+
+  "text.config.cave_dweller_config.option.RESET_CALM_MAX": "Maximum calm time",
+  "text.config.cave_dweller_config.option.RESET_CALM_MAX.tooltip": "Maximum time before spawning in.\nNOTE: Cooldown is this * 2!",
+
+  "text.config.cave_dweller_config.option.RESET_CALM_COOLDOWN_CHANCE": "Chance to cool down",
+  "text.config.cave_dweller_config.option.RESET_CALM_COOLDOWN_CHANCE.tooltip": "Chance for calm time to be max * 2.\nFrom 0% (0.0) to 100% (1.0).",
+
+  "text.config.cave_dweller_config.option.RESET_DWELLER_CAVE_NOISE_MIN": "Minimum time between Cave Dweller noises",
+  "text.config.cave_dweller_config.option.RESET_DWELLER_CAVE_NOISE_MIN.tooltip": "These get louder as it gets closer.",
+
+  "text.config.cave_dweller_config.option.RESET_STALK_NOISE_MIN": "Minimum time between stalking noises",
+  "text.config.cave_dweller_config.option.RESET_STALK_NOISE_MIN.tooltip": "These play once it's spawned in, and\nreplace the mod's regular cave noises.\nAssuming it doesn't try to trick you.",
+
+  "text.config.cave_dweller_config.option.RESET_VANILLA_CAVE_NOISE_START_MIN": "Baseline vanilla cave noise cooldown",
+  "text.config.cave_dweller_config.option.RESET_VANILLA_CAVE_NOISE_START_MIN.tooltip": "A high value creates a quiet start with a long delay between sounds,\nfollowed by a dramatic spike in sound frequency as time runs out.\nA low value triggers cave noises almost immediately,\nkeeping the noises frequent and mostly unchanging.",
+
+  "text.config.cave_dweller_config.option.SPAWN_HEIGHT": "Maximum Spawn Height",
+  "text.config.cave_dweller_config.option.SPAWN_HEIGHT.tooltip": "Automatically accounts for custom world heights!\nNOTE: Option is ignored if surface spawning is enabled.",
+
+  "text.config.cave_dweller_config.option.ALLOW_SURFACE_SPAWN": "Allow surface spawning?",
+  "text.config.cave_dweller_config.option.ALLOW_SURFACE_SPAWN.tooltip": "Allows for surface spawning.\nNOTE: Will spawn on the surface regardless of spawn height set.\nMay be altered in the future.",
+
+  "text.config.cave_dweller_config.option.SKY_LIGHT_LEVEL": "Required sky light level",
+  "text.config.cave_dweller_config.option.SKY_LIGHT_LEVEL.tooltip": "Sets the maximum light threshold required for\nspawning on the surface.",
+
+  "text.config.cave_dweller_config.option.BLOCK_LIGHT_LEVEL": "Required block light level",
+  "text.config.cave_dweller_config.option.BLOCK_LIGHT_LEVEL.tooltip": "Sets the maximum light threshold required for\nspawning underground.\nRecommended level is 0, like for all other hostile mobs.",
+
+  "text.config.cave_dweller_config.option.GRACE_PERIOD_BEFORE_RESET": "Default max grace period",
+  "text.config.cave_dweller_config.option.GRACE_PERIOD_BEFORE_RESET.tooltip": "'Grace period' is a timer that starts ticking down when\nyou're no longer a 'spelunker' by definition.\nOnce it starts ticking down, all other timers slow to half speed.\nResets to max once you meet the requirements\nto be a spelunker again.",
+
+  "text.config.cave_dweller_config.option.SPOTTING_RANGE": "Spotting range",
+  "text.config.cave_dweller_config.option.SPOTTING_RANGE.tooltip": "From how far it can spot you.",
+
+  "text.config.cave_dweller_config.option.TIME_UNTIL_LEAVE": "Time before leaving",
+  "text.config.cave_dweller_config.option.TIME_UNTIL_LEAVE.tooltip": "Time before it disappears.\nNOTE: Won't disappear when you're looking.",
+
+  "text.config.cave_dweller_config.option.TIME_UNTIL_LEAVE_CHASE": "Time before leaving in chase",
+  "text.config.cave_dweller_config.option.TIME_UNTIL_LEAVE_CHASE.tooltip": "Time before it disappears while chasing.\nNOTE: Won't disappear when you're looking.",
+
+  "text.config.cave_dweller_config.option.CAN_CLIMB": "Can climb?",
+
+  "text.config.cave_dweller_config.option.ALLOW_RIDING_IN": "Can ride in vehicles?",
+  "text.config.cave_dweller_config.option.ALLOW_RIDING_IN.tooltip": "Recommended to keep this disabled.",
+
+  "text.config.cave_dweller_config.option.TARGET_INVISIBLE": "Can target invisible players?",
+
+  "text.config.cave_dweller_config.option.MAX_HEALTH": "Max health",
+  "text.config.cave_dweller_config.option.MAX_HEALTH.tooltip": "(in half hearts)",
+
+  "text.config.cave_dweller_config.option.ATTACK_DAMAGE": "Attack damage",
+  "text.config.cave_dweller_config.option.ATTACK_DAMAGE.tooltip": "(in half hearts)",
+
+  "text.config.cave_dweller_config.option.ATTACK_RATE": "Attack rate",
+  "text.config.cave_dweller_config.option.ATTACK_RATE.tooltip": "(in times per second)",
+
+  "text.config.cave_dweller_config.option.MOVEMENT_SPEED": "Movement speed",
+  "text.config.cave_dweller_config.option.MOVEMENT_SPEED.tooltip": "Used as a basis for ALL movement",
+
+  "text.config.cave_dweller_config.option.KNOCKBACK_RESISTANCE": "Knockback resistance",
+  "text.config.cave_dweller_config.option.KNOCKBACK_RESISTANCE.tooltip": "From 0% (0.0) to 100% (1.0)",
+
+  "text.config.cave_dweller_config.option.ARMOR": "Armor"
+}

@@ -1,0 +1,26 @@
+{
+  "mappings": {
+    "com/thecaptain/cavedweller/mixin/MixinGroundPathNavigation": {
+      "canUpdatePath": "Lnet/minecraft/class_1409;method_6358()Z"
+    },
+    "com/thecaptain/cavedweller/mixin/MixinLivingEntity": {
+      "travel": "Lnet/minecraft/class_1309;method_6091(Lnet/minecraft/class_243;)V"
+    },
+    "com/thecaptain/cavedweller/mixin/MixinServerWorld": {
+      "tickServer": "Lnet/minecraft/server/MinecraftServer;method_3748(Ljava/util/function/BooleanSupplier;)V"
+    }
+  },
+  "data": {
+    "named:intermediary": {
+      "com/thecaptain/cavedweller/mixin/MixinGroundPathNavigation": {
+        "canUpdatePath": "Lnet/minecraft/class_1409;method_6358()Z"
+      },
+      "com/thecaptain/cavedweller/mixin/MixinLivingEntity": {
+        "travel": "Lnet/minecraft/class_1309;method_6091(Lnet/minecraft/class_243;)V"
+      },
+      "com/thecaptain/cavedweller/mixin/MixinServerWorld": {
+        "tickServer": "Lnet/minecraft/server/MinecraftServer;method_3748(Ljava/util/function/BooleanSupplier;)V"
+      }
+    }
+  }
+}

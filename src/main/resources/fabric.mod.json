@@ -1,28 +1,29 @@
 {
 	"schemaVersion": 1,
-	"id": "cavenoise",
+	"id": "cave_dweller",
 	"version": "${version}",
 	"name": "Bedrock Cave Dweller",
-	"description": "Adds a horrifying monster, and some extra cave sounds. Now for Fabric 1.20.1!",
+	"description": "Adds the Cave Dweller Add On from Bedrock Edition. Now for Fabric 1.20.1!",
 	"authors": [
 		"Gargin",
+		"XP GAMES",
 		"The Captain",
 		"SiverDx",
 		"alessandrv"
 	],
 	"license": "MIT",
-	"icon": "assets/cavenoise/icon.png",
+	"icon": "assets/cavedweller/icon.png",
 	"environment": "*",
 	"entrypoints": {
 		"main": [
-			"com.gargin.cavenoise.CaveNoise"
+          "com.thecaptain.cavedweller.CaveDweller"
 		],
 		"client": [
-			"com.gargin.cavenoise.CaveNoiseClient"
+			"com.thecaptain.cavedweller.CaveDwellerClient"
 		]
 	},
 	"mixins": [
-		"cavedwellerlatestfabric.mixins.json"
+		"bedrockcavedweller.mixins.json"
 	],
 	"depends": {
 		"fabricloader": ">=0.19.3",
