@@ -29,10 +29,11 @@ public class DwellerStareGoal extends Goal {
     }
 
     public void start() {
-        super.start();
         this.caveDweller.setNoGravity(false);
         this.caveDweller.noPhysics = false;
+        this.caveDweller.stalking = false;
         this.caveDweller.setInStandoff(false);
+        super.start();
     }
 
     @Override
@@ -59,7 +60,7 @@ public class DwellerStareGoal extends Goal {
         this.caveDweller.getEntityData().set(CaveDwellerEntity.SPOTTED_ACCESSOR, false);
     }
 
-    private boolean shouldAttackBasedOnArmor(LivingEntity target) {
+    private boolean shouldStandOffBasedOnArmor(LivingEntity target) {
         if (target == null) {
             return false;
         }
@@ -87,41 +88,51 @@ public class DwellerStareGoal extends Goal {
             return;
         }
 
+        this.caveDweller.pleaseStopMoving = true;
+        this.caveDweller.getNavigation().stop();
+        this.caveDweller.setDeltaMovement(Vec3.ZERO);
+
         if (this.caveDweller.isInStandoff()) {
             this.standoffTick();
         }
 
         boolean areCurrentlyLookingTowardsAndSeeing = this.caveDweller.targetIsLookingAtMe && target.hasLineOfSight(this.caveDweller);
+
         if (this.wereNotLooking && areCurrentlyLookingTowardsAndSeeing) {
             ++this.lookedAtCount;
         }
 
-        if (this.caveDweller.getRandom().nextFloat() < 0.001F && !(this.decisionCooldown <= 0) && !this.caveDweller.isInStandoff()) {
-            if (this.caveDweller.getRandom().nextBoolean()) {
-                this.canStandoffOrStalk = true;
-                this.caveDweller.stalking = true;
-                this.caveDweller.currentRoll = Roll.STALK;
-            } else {
-                this.caveDweller.currentRoll = Roll.HIDE;
-            }
+        // If decision cooldown is counting down, and dweller is not in a standoff
+        if (this.decisionCooldown > 0 && !this.caveDweller.isInStandoff()) {
+            // There is a .05% chance every tick to either check if it should stand-off or hide
+            if (this.caveDweller.getRandom().nextFloat() < 0.0005F) {
+                if (this.shouldStandOffBasedOnArmor(target)) {
+                    this.caveDweller.setInStandoff(true);
+                } else {
+                    this.caveDweller.currentRoll = Roll.HIDE;
+                }
+            }    
         }
 
-        if (this.lookedAtCount > 2 && !this.canStandoffOrStalk && !this.caveDweller.isInStandoff()) {
+        // If dweller's been looked at 2 or more times, can't stand-off or stalk, and is not in a standoff...
+        if (this.lookedAtCount >= 2 && !this.canStandoffOrStalk && !this.caveDweller.isInStandoff()) {
+            // If the decision cooldown hits 0...
             if (this.decisionCooldown <= 0) {
+                // If target is not looking and seeing...
                 if (!areCurrentlyLookingTowardsAndSeeing) {
+                    // There is a 40% chance to hide. If not, then set the decision cooldown to 40 ticks
                     if (this.caveDweller.getRandom().nextFloat() < 0.4F) {
                         this.caveDweller.currentRoll = Roll.HIDE;
                     } else {
                         this.decisionCooldown = 40;
                     }
+                // If target IS looking and seeing...
                 } else {
+                    // There is a 60% chance to either stand-off, or start stalking if not able to attack based on armor
                     if (this.caveDweller.getRandom().nextFloat() < 0.6F) {
                         this.canStandoffOrStalk = true;
 
-                        if (this.shouldAttackBasedOnArmor(target)) {
-                            this.caveDweller.pleaseStopMoving = true;
-                            this.caveDweller.getNavigation().stop();
-                            this.caveDweller.setDeltaMovement(Vec3.ZERO);
+                        if (this.shouldStandOffBasedOnArmor(target)) {
                             this.caveDweller.setInStandoff(true);
                         } else {
                             this.caveDweller.stalking = true;
@@ -131,26 +142,6 @@ public class DwellerStareGoal extends Goal {
                         this.decisionCooldown = 60;
                     }
                 }
-            }
-        }
-        
-        if (areCurrentlyLookingTowardsAndSeeing && !this.canStandoffOrStalk) {
-            this.caveDweller.pleaseStopMoving = true;
-            this.caveDweller.getNavigation().stop();
-            this.caveDweller.setDeltaMovement(Vec3.ZERO);
-        }
-
-        if (!areCurrentlyLookingTowardsAndSeeing && !this.caveDweller.isInStandoff()) {
-            this.caveDweller.pleaseStopMoving = false;
-            this.caveDweller.getNavigation().moveTo(target, 0.7);
-            if (this.caveDweller.isMoving()) {
-                this.caveDweller.getEntityData().set(CaveDwellerEntity.SQUEEZING_ACCESSOR, true);
-                this.caveDweller.refreshDimensions();
-            }
-        } else {
-            if (!this.caveDweller.isMoving()) {
-                this.caveDweller.getEntityData().set(CaveDwellerEntity.SQUEEZING_ACCESSOR, false);
-                this.caveDweller.refreshDimensions();
             }
         }
 
@@ -170,9 +161,9 @@ public class DwellerStareGoal extends Goal {
 
         boolean areCurrentlyLookingTowardsAndSeeing = this.caveDweller.targetIsLookingAtMe && target.hasLineOfSight(this.caveDweller);
 
+        // Check every 60 ticks (3 seconds) whether to attack. Starts attack if you lose sight of it regardless of decision cooldown
         if (this.decisionCooldown <= 0 || !areCurrentlyLookingTowardsAndSeeing) {
             if (this.caveDweller.getRandom().nextBoolean()) {
-                this.caveDweller.getEntityData().set(CaveDwellerEntity.AGGRO_ACCESSOR, true);
                 this.caveDweller.currentRoll = Roll.CHASE;
             }
         }

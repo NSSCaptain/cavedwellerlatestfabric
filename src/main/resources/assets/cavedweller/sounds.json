@@ -1,295 +1,120 @@
 {
-  "cavedweller_1": {
+  "cavedweller_ambient": {
     "subtitle": "Unnatural sound",
     "sounds": [
-      "cavedweller:cavedweller_1"
+      "cavedweller:cavenoise_1",
+      "cavedweller:cavenoise_2",
+      "cavedweller:cavenoise_3",
+      "cavedweller:cavenoise_4",
+      "cavedweller:cavenoise_5",
+      "cavedweller:cavenoise_6",
+      "cavedweller:cavenoise_7",
+      "cavedweller:cavenoise_8",
+      "cavedweller:cavenoise_9"
     ]
   },
-  "cavedweller_2": {
-    "subtitle": "Unnatural sound",
-    "sounds": [
-      "cavedweller:cavedweller_2"
-    ]
-  },
-  "cavedweller_3": {
-    "subtitle": "Unnatural sound",
-    "sounds": [
-      "cavedweller:cavedweller_3"
-    ]
-  },
-  "cavedweller_4": {
-    "subtitle": "Unnatural sound",
-    "sounds": [
-      "cavedweller:cavedweller_4"
-    ]
-  },
-  "cavedweller_5": {
-    "subtitle": "Unnatural sound",
-    "sounds": [
-      "cavedweller:cavedweller_5"
-    ]
-  },
-  "cavedweller_6": {
-    "subtitle": "Unnatural sound",
-    "sounds": [
-      "cavedweller:cavedweller_6"
-    ]
-  },
-  "cavedweller_7": {
-    "subtitle": "Unnatural sound",
-    "sounds": [
-      "cavedweller:cavedweller_7"
-    ]
-  },
-  "cavedweller_8": {
-    "subtitle": "Unnatural sound",
-    "sounds": [
-      "cavedweller:cavedweller_8"
-    ]
-  },
-  "cavedweller_9": {
-    "subtitle": "Unnatural sound",
-    "sounds": [
-      "cavedweller:cavedweller_9"
-    ]
-  },
-  "step_1": {
+  "cavedweller_step": {
     "subtitle": "Footsteps",
     "sounds": [
-      "cavedweller:step_1"
-    ]
-  },
-  "step_2": {
-    "subtitle": "Footsteps",
-    "sounds": [
-      "cavedweller:step_2"
-    ]
-  },
-  "step_3": {
-    "subtitle": "Footsteps",
-    "sounds": [
-      "cavedweller:step_3"
-    ]
-  },
-  "step_4": {
-    "subtitle": "Footsteps",
-    "sounds": [
+      "cavedweller:step_1",
+      "cavedweller:step_2",
+      "cavedweller:step_3",
       "cavedweller:step_4"
     ]
   },
-  "transition_1": {
+  "cavedweller_transition": {
     "subtitle": "§kCave_Dweller§r's jaw cracks",
     "sounds": [
-      "cavedweller:transition_1"
-    ]
-  },
-  "transition_2": {
-    "subtitle": "§kCave_Dweller§r's jaw cracks",
-    "sounds": [
-      "cavedweller:transition_2"
-    ]
-  },
-  "transition_3": {
-    "subtitle": "§kCave_Dweller§r's jaw cracks",
-    "sounds": [
-      "cavedweller:transition_3"
-    ]
-  },
-  "transition_4": {
-    "subtitle": "§kCave_Dweller§r's jaw cracks",
-    "sounds": [
+      "cavedweller:transition_1",
+      "cavedweller:transition_2",
+      "cavedweller:transition_3",
       "cavedweller:transition_4"
     ]
   },
-  "chase_1": {
+  "cavedweller_chase": {
     "subtitle": "§kCave_Dweller§r screeches",
     "sounds": [
-      "cavedweller:chase_1"
-    ]
-  },
-  "chase_2": {
-    "subtitle": "§kCave_Dweller§r screeches",
-    "sounds": [
-      "cavedweller:chase_2"
-    ]
-  },
-  "chase_3": {
-    "subtitle": "§kCave_Dweller§r screeches",
-    "sounds": [
-      "cavedweller:chase_3"
-    ]
-  },
-  "chase_4": {
-    "subtitle": "§kCave_Dweller§r screeches",
-    "sounds": [
+      "cavedweller:chase_1",
+      "cavedweller:chase_2",
+      "cavedweller:chase_3",
       "cavedweller:chase_4"
     ]
   },
-  "heartbeat": {
+  "cavedweller_heartbeat": {
     "subtitle": "§kCave_Dweller§r's heart beats",
     "sounds": [
       "cavedweller:heartbeat"
     ]
   },
-  "idle_1": {
+  "cavedweller_idle": {
     "subtitle": "§kCave_Dweller§r breathes",
     "sounds": [
-      "cavedweller:idle_1"
-    ]
-  },
-    "idle_2": {
-    "subtitle": "§kCave_Dweller§r breathes",
-    "sounds": [
+      "cavedweller:idle_1",
       "cavedweller:idle_2"
     ]
   },
-  "breathing_1": {
+  "cavedweller_breathing": {
     "subtitle": "§kCave_Dweller§r huffs",
     "sounds": [
-      "cavedweller:breathing_1"
-    ]
-  },
-    "breathing_2": {
-    "subtitle": "§kCave_Dweller§r huffs",
-    "sounds": [
-      "cavedweller:breathing_2"
-    ]
-  },
-    "breathing_3": {
-    "subtitle": "§kCave_Dweller§r huffs",
-    "sounds": [
+      "cavedweller:breathing_1",
+      "cavedweller:breathing_2",
       "cavedweller:breathing_3"
     ]
   },
-  "disappear": {
+  "cavedweller_disappear": {
     "subtitle": "§kCave_Dweller§r disappeared",
     "sounds": [
       "cavedweller:disappear"
     ]
   },
-  "spotted_1": {
+  "cavedweller_spotted": {
     "subtitle": "You spotted it",
     "sounds": [
-      "cavedweller:spotted_1"
-    ]
-  },
-  "spotted_2": {
-    "subtitle": "You spotted it",
-    "sounds": [
-      "cavedweller:spotted_2"
-    ]
-  },
-  "spotted_3": {
-    "subtitle": "You spotted it",
-    "sounds": [
+      "cavedweller:spotted_1",
+      "cavedweller:spotted_2",
       "cavedweller:spotted_3"
     ]
   },
-  "spotted_distant": {
+  "cavedweller_spotted_distant": {
     "subtitle": "You see something",
     "sounds": [
       "cavedweller:spotted_distant"
     ]
   },
-  "dweller_death_1": {
+  "cavedweller_death": {
     "subtitle": "§kCave_Dweller§r dies",
     "sounds": [
-      "cavedweller:dweller_death_1"
-    ]
-  },
-  "dweller_death_2": {
-    "subtitle": "§kCave_Dweller§r dies",
-    "sounds": [
-      "cavedweller:dweller_death_2"
-    ]
-  },
-  "dweller_death_3": {
-    "subtitle": "§kCave_Dweller§r dies",
-    "sounds": [
-      "cavedweller:dweller_death_3"
-    ]
-  },
-  "dweller_death_4": {
-    "subtitle": "§kCave_Dweller§r dies",
-    "sounds": [
+      "cavedweller:dweller_death_1",
+      "cavedweller:dweller_death_2",
+      "cavedweller:dweller_death_3",
       "cavedweller:dweller_death_4"
     ]
   },
-  "hurt_1": {
+  "cavedweller_hurt": {
     "subtitle": "§kCave_Dweller§r hurts",
     "sounds": [
-      "cavedweller:hurt_1"
-    ]
-  },
-  "hurt_2": {
-    "subtitle": "§kCave_Dweller§r hurts",
-    "sounds": [
-      "cavedweller:hurt_2"
-    ]
-  },
-  "hurt_3": {
-    "subtitle": "§kCave_Dweller§r hurts",
-    "sounds": [
-      "cavedweller:hurt_3"
-    ]
-  },
-  "hurt_4": {
-    "subtitle": "§kCave_Dweller§r hurts",
-    "sounds": [
+      "cavedweller:hurt_1",
+      "cavedweller:hurt_2",
+      "cavedweller:hurt_3",
       "cavedweller:hurt_4"
     ]
   },
-  "stalk_1": {
+  "cavedweller_stalk": {
     "subtitle": "Something draws close",
     "sounds": [
-      "cavedweller:stalk_1"
-    ]
-  },
-  "stalk_2": {
-    "subtitle": "Something draws close",
-    "sounds": [
-      "cavedweller:stalk_2"
-    ]
-  },
-  "stalk_3": {
-    "subtitle": "Something draws close",
-    "sounds": [
-      "cavedweller:stalk_3"
-    ]
-  },
-  "stalk_4": {
-    "subtitle": "Something draws close",
-    "sounds": [
-      "cavedweller:stalk_4"
-    ]
-  },
-  "stalk_5": {
-    "subtitle": "Something draws close",
-    "sounds": [
+      "cavedweller:stalk_1",
+      "cavedweller:stalk_2",
+      "cavedweller:stalk_3",
+      "cavedweller:stalk_4",
       "cavedweller:stalk_5"
     ]
   },
-  "climb_1": {
+  "cavedweller_climb": {
     "subtitle": "§kCave_Dweller§r climbs",
     "sounds": [
-      "cavedweller:climb_1"
-    ]
-  },
-  "climb_2": {
-    "subtitle": "§kCave_Dweller§r climbs",
-    "sounds": [
-      "cavedweller:climb_2"
-    ]
-  },
-  "climb_3": {
-    "subtitle": "§kCave_Dweller§r climbs",
-    "sounds": [
-      "cavedweller:climb_3"
-    ]
-  },
-  "climb_4": {
-    "subtitle": "§kCave_Dweller§r climbs",
-    "sounds": [
+      "cavedweller:climb_1",
+      "cavedweller:climb_2",
+      "cavedweller:climb_3",
       "cavedweller:climb_4"
     ]
   }

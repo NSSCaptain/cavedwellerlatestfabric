@@ -33,11 +33,19 @@ public class ModConfigModel {
     @RestartRequired
     public boolean DEBUG = false; // default: false
 
+    /// Chances
+    //Chance to spawn stalking
+    @RangeConstraint(
+            min = (double)0.0,
+            max = (double)1.0
+    )
+    public double CHANCE_TO_SPAWN_STALKING = 0.4; // default: 0.4
+
     /// Timers
     // Calm timer
     @RangeConstraint(
        min = (double)120,
-       max = (double)666
+       max = (double)1000
     )
     public int RESET_CALM_MIN = 500; // default: 500
     @RangeConstraint(
@@ -49,7 +57,7 @@ public class ModConfigModel {
             min = (double)0.0,
             max = (double)1.0
     )
-    public double RESET_CALM_COOLDOWN_CHANCE = 0.2; // default: 0.2
+    public double RESET_CALM_COOLDOWN_CHANCE = 0.1; // default: 0.2
 
     // Vanilla cave noise timer
     @RangeConstraint(
@@ -67,21 +75,33 @@ public class ModConfigModel {
 
     // Stalk noise timer
     @RangeConstraint(
-            min = (double)30,
-            max = (double)1000
+            min = (double)10,
+            max = (double)500
     )
     public int RESET_STALK_NOISE_MIN = 30; // default: 30
 
     // Grace period
-    public int GRACE_PERIOD_BEFORE_RESET = 180; // default: 180
+    @RangeConstraint(
+            min = (double)1,
+            max = (double)1000
+    )
+    public int GRACE_PERIOD_BEFORE_RESET = 240; // default: 240
 
     /// Spawning
     // Removed range constraint to account for worlds with custom heights
     // Extra spawn check added in CaveDwellerEntity to prevent issues
     public int SPAWN_HEIGHT = 0; // default: 0
     public boolean ALLOW_SURFACE_SPAWN = false; // default: false
+    @RangeConstraint(
+            min = (double)0,
+            max = (double)15
+    )
     public int SKY_LIGHT_LEVEL = 0; // default: 0
-    public int BLOCK_LIGHT_LEVEL = 0; // default: 0
+    @RangeConstraint(
+            min = (double)0,
+            max = (double)15
+    )
+    public int BLOCK_LIGHT_LEVEL = 3; // default: 3
 
     /// Spotted range
     @RestartRequired
@@ -112,7 +132,6 @@ public class ModConfigModel {
     public double MAX_HEALTH = (double)500.0F; // default: 500
     @RestartRequired
     // Movement speed
-    // TODO: Speed up when dweller falls behind/hasn't attacked player in a period of time during chase
     @RangeConstraint(
             min = (double)0.1,
             max = (double)10

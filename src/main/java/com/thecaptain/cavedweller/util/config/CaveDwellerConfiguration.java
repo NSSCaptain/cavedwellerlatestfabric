@@ -13,6 +13,7 @@ public class CaveDwellerConfiguration extends ConfigWrapper<ModConfigModel> {
     private final Option<Boolean> TARGET_INVISIBLE;
     private final Option<Boolean> DISAPPEAR;
     private final Option<Boolean> DEBUG;
+    private final Option<Double> CHANCE_TO_SPAWN_STALKING;
     private final Option<Integer> RESET_CALM_MIN;
     private final Option<Integer> RESET_CALM_MAX;
     private final Option<Double> RESET_CALM_COOLDOWN_CHANCE;
@@ -39,6 +40,7 @@ public class CaveDwellerConfiguration extends ConfigWrapper<ModConfigModel> {
         this.GIVE_DARKNESS = this.optionForKey(this.keys.GIVE_DARKNESS);
         this.DISAPPEAR = this.optionForKey(this.keys.DISAPPEAR);
         this.DEBUG = this.optionForKey(this.keys.DEBUG);
+        this.CHANCE_TO_SPAWN_STALKING = this.optionForKey(this.keys.CHANCE_TO_SPAWN_STALKING);
         this.RESET_CALM_MIN = this.optionForKey(this.keys.RESET_CALM_MIN);
         this.RESET_CALM_MAX = this.optionForKey(this.keys.RESET_CALM_MAX);
         this.RESET_CALM_COOLDOWN_CHANCE = this.optionForKey(this.keys.RESET_CALM_COOLDOWN_CHANCE);
@@ -69,6 +71,7 @@ public class CaveDwellerConfiguration extends ConfigWrapper<ModConfigModel> {
         this.GIVE_DARKNESS = this.optionForKey(this.keys.GIVE_DARKNESS);
         this.DISAPPEAR = this.optionForKey(this.keys.DISAPPEAR);
         this.DEBUG = this.optionForKey(this.keys.DEBUG);
+        this.CHANCE_TO_SPAWN_STALKING = this.optionForKey(this.keys.CHANCE_TO_SPAWN_STALKING);
         this.RESET_CALM_MIN = this.optionForKey(this.keys.RESET_CALM_MIN);
         this.RESET_CALM_MAX = this.optionForKey(this.keys.RESET_CALM_MAX);
         this.RESET_CALM_COOLDOWN_CHANCE = this.optionForKey(this.keys.RESET_CALM_COOLDOWN_CHANCE);
@@ -128,6 +131,14 @@ public class CaveDwellerConfiguration extends ConfigWrapper<ModConfigModel> {
 
     public void DEBUG(boolean value) {
         this.DEBUG.set(value);
+    }
+
+    public double CHANCE_TO_SPAWN_STALKING() {
+        return (Double)this.CHANCE_TO_SPAWN_STALKING.value();
+    }
+
+    public void CHANCE_TO_SPAWN_STALKING(double value) {
+        this.CHANCE_TO_SPAWN_STALKING.set(value);
     }
 
     public int RESET_CALM_MIN() {
@@ -318,6 +329,7 @@ public class CaveDwellerConfiguration extends ConfigWrapper<ModConfigModel> {
         public final Option.Key GIVE_DARKNESS = new Option.Key("GIVE_DARKNESS");
         public final Option.Key DISAPPEAR = new Option.Key("DISAPPEAR");
         public final Option.Key DEBUG = new Option.Key("DEBUG");
+        public final Option.Key CHANCE_TO_SPAWN_STALKING = new Option.Key("CHANCE_TO_SPAWN_STALKING");
         public final Option.Key RESET_CALM_MIN = new Option.Key("RESET_CALM_MIN");
         public final Option.Key RESET_CALM_MAX = new Option.Key("RESET_CALM_MAX");
         public final Option.Key RESET_CALM_COOLDOWN_CHANCE = new Option.Key("RESET_CALM_COOLDOWN_CHANCE");

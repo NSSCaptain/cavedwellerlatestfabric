@@ -22,11 +22,11 @@ public class DwellerChaseGoal extends Goal {
     private final CaveDwellerEntity caveDweller;
     private final boolean followTargetEvenIfNotSeen;
     private long lastGameTimeCheck;
-    private int ticksUntilLeave;
+    private int ticksUntilRemoveChase;
     private int ticksUntilNextAttack;
     private float ticksUntilCanAttack;
     private BlockPos lastCheckedBlockPos = BlockPos.ZERO;
-    private final int torchDestructionRadius = 1;
+    private final int blockDestructionRadius = 1;
     private double movementSpeed = CaveDweller.CONFIG.MOVEMENT_SPEED();
     private boolean squeezing;
     private double pathedTargetX;
@@ -68,7 +68,6 @@ public class DwellerChaseGoal extends Goal {
         this.ticksUntilCanAttack = ticksUntilCanAttack;
         this.vecNodePos = null;
         this.nodePos = null;
-        this.ticksUntilLeave = Utils.secondsToTicks(CaveDweller.CONFIG.TIME_UNTIL_LEAVE_CHASE());
         this.isWallWet = false;
     }
 
@@ -171,34 +170,24 @@ public class DwellerChaseGoal extends Goal {
         return true;
     }
 
-    public void tickAggroClock() {
-        --this.ticksUntilCanAttack;
-        if (this.ticksUntilCanAttack <= 0.0F) {
-            this.caveDweller.getEntityData().set(CaveDwellerEntity.AGGRO_ACCESSOR, true);
-        }
-
-        this.caveDweller.isAggro = true;
-    }
-
     @Override
     public void tick() {
-
         if (this.caveDweller.initializationDelayTicks > 0) {
             this.caveDweller.initializationDelayTicks--;
+
 
             this.caveDweller.playChaseSound();
             this.caveDweller.pleaseStopMoving = true;
             this.caveDweller.setDeltaMovement(Vec3.ZERO);
+            this.caveDweller.setNeedsToCatchUp(false);
 
             if (this.caveDweller.initializationDelayTicks <= 0) {
+                this.caveDweller.setInStandoff(false);
                 this.caveDweller.pleaseStopMoving = false;
             }
 
             return;
         }
-
-        this.caveDweller.setInStandoff(false);
-
 
         LivingEntity target = null;
 
@@ -206,9 +195,14 @@ public class DwellerChaseGoal extends Goal {
             target = this.caveDweller.getTarget();
         }
 
-        this.tickAggroClock();
+        --this.ticksUntilCanAttack;
+        if (this.ticksUntilCanAttack <= 0.0F) {
+            this.caveDweller.getEntityData().set(CaveDwellerEntity.AGGRO_ACCESSOR, true);
+        }
 
-        if (this.ticksUntilLeave <= 0 && !this.caveDweller.targetIsLookingAtMe) {
+        this.caveDweller.isAggro = true;
+
+        if (this.caveDweller.ticksUntilRemoveChase <= 0 && !this.caveDweller.targetIsLookingAtMe) {
             this.caveDweller.disappear();
             return;
         }
@@ -269,20 +263,17 @@ public class DwellerChaseGoal extends Goal {
                 this.caveDweller.refreshDimensions();
             }
 
-            // TODO: Reuse for "catchu_up" anim?
-            /*
-            double movementSpeed = 0.85 / (double) this.maxSpeedReached * (double) this.speedUp;
-            this.caveDweller.getNavigation().moveTo(path, 1.0);
-
-            if (this.speedUp < this.maxSpeedReached) {
-                ++this.speedUp;
+            if (this.caveDweller.needsToCatchUp()) {
+                if (!this.squeezing && !this.climbing) {
+                    this.caveDweller.getNavigation().moveTo(path, 1.3);
+                }
+            } else {
+                this.caveDweller.getNavigation().moveTo(path, 1.0);
             }
-            */
-            this.caveDweller.getNavigation().moveTo(path, 1.0);
 
             this.tickBlockDestructionEngine();
 
-            --this.ticksUntilLeave;
+            --this.caveDweller.ticksUntilRemoveChase;
             this.ticksUntilNextPathRecalculation = this.adjustedTickDelay(this.ticksUntilNextPathRecalculation);
         }
     }
@@ -398,7 +389,6 @@ public class DwellerChaseGoal extends Goal {
     }
 
     /// Block breaking
-    // TODO: Change to Bedrock system of burning out torches
     private void tickBlockDestructionEngine() {
         BlockPos currentBlockPos = new BlockPos((int)Math.floor(this.caveDweller.getX()), (int)Math.floor(this.caveDweller.getY()), (int)Math.floor(this.caveDweller.getZ()));
         if (currentBlockPos.equals(this.lastCheckedBlockPos) && this.breakingBlockPos == null) {
@@ -407,9 +397,9 @@ public class DwellerChaseGoal extends Goal {
 
         if (this.breakingBlockPos == null) {
             blockSearchLoop:
-            for (int dX = -this.torchDestructionRadius; dX <= this.torchDestructionRadius; ++dX) {
-                for (int dY = -this.torchDestructionRadius; dY <= this.torchDestructionRadius; ++dY) {
-                    for (int dZ = -this.torchDestructionRadius; dZ <= this.torchDestructionRadius; ++dZ) {
+            for (int dX = -this.blockDestructionRadius; dX <= this.blockDestructionRadius; ++dX) {
+                for (int dY = 0; dY <= this.blockDestructionRadius; ++dY) {
+                    for (int dZ = -this.blockDestructionRadius; dZ <= this.blockDestructionRadius; ++dZ) {
                         BlockPos targetBlockPos = currentBlockPos.offset(dX, dY, dZ);
                         BlockState blockstate = this.caveDweller.level().getBlockState(targetBlockPos);
 
@@ -422,7 +412,11 @@ public class DwellerChaseGoal extends Goal {
                                 || blockstate.is(net.minecraft.tags.TagKey.create(net.minecraft.core.registries.Registries.BLOCK, new net.minecraft.resources.ResourceLocation("c", "glass_blocks")))
                                 || blockstate.is(net.minecraft.tags.TagKey.create(net.minecraft.core.registries.Registries.BLOCK, new net.minecraft.resources.ResourceLocation("c", "glass_panes"))))
                         {
-                            if (blockstate.is(Blocks.TORCH) || blockstate.is(Blocks.WALL_TORCH) || blockstate.is(Blocks.SOUL_TORCH) || blockstate.is(Blocks.SOUL_WALL_TORCH)) {
+                            // TODO: Change this to replace torches with burnt-out versions instead of breaking them
+                            if (blockstate.is(Blocks.TORCH)
+                                    || blockstate.is(Blocks.WALL_TORCH)
+                                    || blockstate.is(Blocks.SOUL_TORCH)
+                                    || blockstate.is(Blocks.SOUL_WALL_TORCH)) {
                                 this.caveDweller.level().destroyBlock(targetBlockPos, true, this.caveDweller);
                             } else {
                                 this.breakingBlockPos = targetBlockPos;
@@ -445,7 +439,6 @@ public class DwellerChaseGoal extends Goal {
                 return;
             }
 
-            this.caveDweller.getNavigation().stop();
             this.caveDweller.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
             this.blockBreakProgress += 0.3F;
             int visualProgressIndex = (int) (this.blockBreakProgress * 10.0F);
@@ -477,8 +470,8 @@ public class DwellerChaseGoal extends Goal {
         this.caveDweller.getEntityData().set(CaveDwellerEntity.CLIMB_ANGLE_ACCESSOR, this.caveDweller.getYRot());
         this.caveDweller.wallDirection = Direction.getNearest((float)(this.climbPos.getX() - this.caveDweller.getX()), 0.0F, (float)(this.climbPos.getZ() - this.caveDweller.getZ()));
         this.caveDweller.getEntityData().set(CaveDwellerEntity.CLIMB_WALL_ACCESSOR, this.caveDweller.wallDirection);
-        System.out.println("started climbing with pos: " + this.climbPos);
-        System.out.println("started climbing on wall to the " + this.caveDweller.wallDirection);
+        //System.out.println("started climbing with pos: " + this.climbPos);
+        //System.out.println("started climbing on wall to the " + this.caveDweller.wallDirection);
     }
 
     public void stopClimbing() {

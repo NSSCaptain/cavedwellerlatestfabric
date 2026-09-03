@@ -20,6 +20,8 @@ public class DwellerHideGoal extends Goal {
             return false;
         } else if (this.caveDweller.currentRoll != Roll.HIDE) {
             return false;
+        } else if (this.caveDweller.getEntityData().get(CaveDwellerEntity.SQUEEZING_ACCESSOR)) {
+            return false;
         } else {
             return this.caveDweller.getTarget() != null;
         }

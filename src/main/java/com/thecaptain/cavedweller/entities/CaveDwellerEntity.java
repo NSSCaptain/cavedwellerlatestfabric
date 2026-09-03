@@ -71,15 +71,13 @@ public class CaveDwellerEntity extends Monster implements GeoEntity {
     private final RawAnimation IDLE;
     private final RawAnimation CROUCH_RUN;
     private final RawAnimation CROUCH_IDLE;
-    private final RawAnimation CALM_RUN;
-    private final RawAnimation CALM_STILL;
     private final RawAnimation IS_SPOTTED;
     private final RawAnimation SQUEEZE;
     private final RawAnimation SQUEEZE_END;
     private final RawAnimation HIDE;
     private final RawAnimation STALK;
     private final RawAnimation STALK_IDLE;
-    private final RawAnimation CLIMB;
+    private final RawAnimation CLIMB_WIDE;
     private final RawAnimation DEATH;
     private final RawAnimation HURT;
     private final RawAnimation STANDOFF;
@@ -90,6 +88,7 @@ public class CaveDwellerEntity extends Monster implements GeoEntity {
     public static final EntityDataAccessor<Boolean> SQUEEZING_ACCESSOR;
     public static final EntityDataAccessor<Boolean> SPOTTED_ACCESSOR;
     public static final EntityDataAccessor<Boolean> STANDOFF_ACCESSOR;
+    public static final EntityDataAccessor<Boolean> CATCH_UP_ACCESSOR;
     public static final EntityDataAccessor<Boolean> CLIMBING_ACCESSOR;
     public static final EntityDataAccessor<Float> CLIMB_ANGLE_ACCESSOR = SynchedEntityData.defineId(CaveDwellerEntity.class, EntityDataSerializers.FLOAT);
     public static final EntityDataAccessor<Direction> CLIMB_WALL_ACCESSOR = SynchedEntityData.defineId(CaveDwellerEntity.class, EntityDataSerializers.DIRECTION);
@@ -108,7 +107,8 @@ public class CaveDwellerEntity extends Monster implements GeoEntity {
     public boolean pleaseStopMoving;
     public boolean targetIsLookingAtMe;
     private float twoBlockSpaceTimer;
-    private int ticksUntilRemove;
+    public int ticksUntilRemove;
+    public int ticksUntilRemoveChase;
     private int chaseSoundClock = 5000;
     private int chaseSoundClockReset;
     private int climbSoundClock;
@@ -137,13 +137,11 @@ public class CaveDwellerEntity extends Monster implements GeoEntity {
     private float targetAlpha;
     private boolean shouldDisappearAfterFade;
     public boolean isSubmerged = this.isInWater() || this.level().containsAnyLiquid(this.getBoundingBox());
+    public double tooFarThreshold = 4;
 
     // DEBUG
-    private int spawnScanTickCounter = 0;
-
-    public boolean spottedByPlayer = false;
     public boolean stalking;
-    SoundEvent spottedSound;
+    public boolean spawnedStalking;
     SoundEvent deathSound;
     // Added an "_" so there isn't a space in the obfuscated name (for Bedrock parity)
     public String caveDwellerName = "§kCave_Dweller§r";
@@ -171,15 +169,13 @@ public class CaveDwellerEntity extends Monster implements GeoEntity {
         this.IDLE = RawAnimation.begin().then("animation.cave_dweller.idle", LoopType.LOOP);
         this.CROUCH_RUN = RawAnimation.begin().then("animation.cave_dweller.crouch_run_new", LoopType.LOOP);
         this.CROUCH_IDLE = RawAnimation.begin().then("animation.cave_dweller.crouch_idle", LoopType.LOOP);
-        this.CALM_RUN = RawAnimation.begin().then("animation.cave_dweller.walk", LoopType.LOOP);
-        this.CALM_STILL = RawAnimation.begin().then("animation.cave_dweller.idle", LoopType.LOOP);
         this.IS_SPOTTED = RawAnimation.begin().then("animation.cave_dweller.idle", LoopType.LOOP);
         this.SQUEEZE = RawAnimation.begin().then("animation.cave_dweller.squeeze", LoopType.LOOP);
         this.SQUEEZE_END = RawAnimation.begin().then("animation.cave_dweller.squeeze_end", LoopType.HOLD_ON_LAST_FRAME);
         this.HIDE = RawAnimation.begin().then("animation.cave_dweller.idle", LoopType.LOOP);
         this.STALK = RawAnimation.begin().then("animation.cave_dweller.stalking", LoopType.LOOP);
         this.STALK_IDLE = RawAnimation.begin().then("animation.cave_dweller.stalking_idle", LoopType.LOOP);
-        this.CLIMB = RawAnimation.begin().then("animation.cave_dweller.climb", LoopType.LOOP);
+        this.CLIMB_WIDE = RawAnimation.begin().then("animation.cave_dweller.climb_wide", LoopType.LOOP);
         this.DEATH = RawAnimation.begin().then("animation.cave_dweller.death", LoopType.HOLD_ON_LAST_FRAME);
         this.HURT = RawAnimation.begin().then("animation.cave_dweller.hurt", LoopType.PLAY_ONCE);
         this.STANDOFF = RawAnimation.begin().then("animation.cave_dweller.standoff", LoopType.HOLD_ON_LAST_FRAME);
@@ -201,12 +197,20 @@ public class CaveDwellerEntity extends Monster implements GeoEntity {
         this.canPlayJawMovement = true;
         this.setMaxUpStep(this.defaultMaxUpStep);
         this.ticksUntilRemove = Utils.secondsToTicks(CaveDweller.CONFIG.TIME_UNTIL_LEAVE());
+        this.ticksUntilRemoveChase = Utils.secondsToTicks(CaveDweller.CONFIG.TIME_UNTIL_LEAVE_CHASE());
         this.wallDirection = Direction.NORTH;
-        this.currentRoll = Roll.STALK;
-        this.stalking = true;
+        this.stalking = this.random.nextFloat() < CaveDweller.CONFIG.CHANCE_TO_SPAWN_STALKING();
+        if (this.stalking) {
+            this.spawnedStalking = true;
+            this.currentRoll = Roll.STALK;
+        } else {
+            this.spawnedStalking = false;
+            this.currentRoll = Roll.STROLL;
+        }
         this.noPhysics = false;
         this.setNoGravity(false);
         this.setInStandoff(false);
+        this.setNeedsToCatchUp(false);
 
         ItemStack enchantedBoots = new ItemStack(Items.NETHERITE_BOOTS);
         enchantedBoots.enchant(Enchantments.DEPTH_STRIDER, 3);
@@ -228,6 +232,7 @@ public class CaveDwellerEntity extends Monster implements GeoEntity {
         this.entityData.define(SQUEEZING_ACCESSOR, false);
         this.entityData.define(SPOTTED_ACCESSOR, false);
         this.entityData.define(STANDOFF_ACCESSOR, false);
+        this.entityData.define(CATCH_UP_ACCESSOR, false);
         this.entityData.define(CLIMBING_ACCESSOR, false);
         this.entityData.define(CLIMB_ANGLE_ACCESSOR, this.getYRot());
         // wallDirection just needs to be initialized
@@ -312,7 +317,7 @@ public class CaveDwellerEntity extends Monster implements GeoEntity {
             BlockPos spawnPos = checkPos.immutable();
             BlockPos groundPos = spawnPos.below();
 
-            System.out.println("checked " + groundPos);
+            //System.out.println("checked " + groundPos);
 
             Vec3 targetVec = new Vec3(
                     spawnPos.getX() + 0.5 - playerEyePos.x,
@@ -322,7 +327,7 @@ public class CaveDwellerEntity extends Monster implements GeoEntity {
 
             double dotProduct = playerLookVec.dot(targetVec.normalize());
             boolean notSeen = dotProduct < 0.5;
-            boolean isDarkEnough = (level.getBrightness(LightLayer.BLOCK, spawnPos) == CaveDweller.CONFIG.BLOCK_LIGHT_LEVEL());
+            boolean isDarkEnough = (level.getBrightness(LightLayer.BLOCK, spawnPos) <= CaveDweller.CONFIG.BLOCK_LIGHT_LEVEL());
 
             if (this.debug) {
                 if (level instanceof ServerLevel serverLevel) {
@@ -478,6 +483,18 @@ public class CaveDwellerEntity extends Monster implements GeoEntity {
             }
         }
 
+        // Catching up
+        LivingEntity target = this.getTarget();
+        
+        if (target != null) {
+            double distanceSq = this.distanceToSqr(target);
+            double tooFarThresholdSq = (this.tooFarThreshold * this.tooFarThreshold);
+            boolean tooFarAway = distanceSq > tooFarThresholdSq;
+            // This is stupid
+            boolean needsToCatchUp = tooFarAway && this.isMoving() && this.isAggro && !this.isInStandoff() && this.initializationDelayTicks <= 0;
+            this.setNeedsToCatchUp(needsToCatchUp);
+        }
+
         // Fading
         // State 1: Fade in
         // State -1: Fade out
@@ -540,15 +557,6 @@ public class CaveDwellerEntity extends Monster implements GeoEntity {
         this.currentRoll = Roll.fromValue(this.random.nextInt(5));
     }
 
-    public void pickRoll(@NotNull List<Roll> rolls) {
-        if (rolls.isEmpty()) {
-            return;
-        }
-
-        this.stalking = false;
-        this.currentRoll = rolls.get(this.random.nextInt(rolls.size()));
-    }
-
     /// Animation
     private PlayState predicate(AnimationState<CaveDwellerEntity> state) {
         // 1. Death state evaluation takes priority
@@ -558,6 +566,7 @@ public class CaveDwellerEntity extends Monster implements GeoEntity {
             return state.setAndContinue(this.DEATH);
         }
 
+        // 2. Standoff and Spotted behaviors must override combat/movement ticks
         if (this.isInStandoff()) {
             return PlayState.STOP;
         }
@@ -570,15 +579,16 @@ public class CaveDwellerEntity extends Monster implements GeoEntity {
             } else if (this.squeezingTicks > 0) {
                 --this.squeezingTicks;
                 return state.setAndContinue(this.SQUEEZE);
-                //return state.setAndContinue(this.SQUEEZE_END);
             } else if (this.entityData.get(CROUCHING_ACCESSOR)) {
                 return state.isMoving() ? state.setAndContinue(this.CROUCH_RUN) : state.setAndContinue(this.CROUCH_IDLE);
             } else if (this.entityData.get(CLIMBING_ACCESSOR)) {
-                return state.setAndContinue(this.CLIMB);
-            } else if (this.initializationDelayTicks > 0 && !state.isMoving() && this.canPlayChaseSound) {
+                return state.setAndContinue(this.CLIMB_WIDE);
+            } else if (this.needsToCatchUp()) {
+                return state.setAndContinue(this.CATCH_UP);
+            } else if (!this.needsToCatchUp() && this.isInStandoff() && this.initializationDelayTicks > 0) {
                 return state.setAndContinue(this.STALK_IDLE);
             } else {
-                return state.isMoving() ? state.setAndContinue(this.CHASE) : state.setAndContinue(this.IDLE);
+                return state.isMoving() ? state.setAndContinue(this.CHASE) : state.setAndContinue(this.STALK_IDLE);
             }
         }
         // 3. Hiding state updates
@@ -587,26 +597,25 @@ public class CaveDwellerEntity extends Monster implements GeoEntity {
         }
         // 4. Stalking phase updates
         else if (this.entityData.get(STALKING_ACCESSOR)) {
-            return state.isMoving() ? state.setAndContinue(this.SQUEEZE) : state.setAndContinue(this.STALK_IDLE);
+            return state.isMoving() ? state.setAndContinue(this.CHASE) : state.setAndContinue(this.STALK_IDLE);
         }
         // 5. Standoff state
         // Shouldn't be moving in this state, so there's no check for it
-        else if (this.entityData.get(STANDOFF_ACCESSOR) && this.isInStandoff()) {
+        else if (this.isInStandoff()) {
             return state.setAndContinue(this.STANDOFF);
         }
         // 6. Spotted state
-        else if (this.entityData.get(SPOTTED_ACCESSOR) && !this.isInStandoff()) {
-            return state.isMoving() ? state.setAndContinue(this.SQUEEZE) : state.setAndContinue(this.IDLE);
+        // Again, shouldn't be moving unless already having broken out of SPOTTED_ACCESSOR
+        else if (this.entityData.get(SPOTTED_ACCESSOR) && !this.isInStandoff() && !this.needsToCatchUp()) {
+            return state.setAndContinue(this.IDLE);
         }
         // 7. Default behavior
-        return state.isMoving() ? state.setAndContinue(this.SQUEEZE) : state.setAndContinue(this.IDLE);
+        return state.isMoving() ? state.setAndContinue(this.CROUCH_IDLE) : state.setAndContinue(this.IDLE);
     }
 
     public void registerControllers(AnimatableManager.ControllerRegistrar controllerRegistrar) {
         controllerRegistrar.add(new AnimationController[]{
                 (new AnimationController(this, "controller", 3, this::predicate))
-                        .triggerableAnim("calm_run", this.CALM_RUN)
-                        .triggerableAnim("calm_still", this.CALM_STILL)
                         .triggerableAnim("walk", this.CHASE)
                         .triggerableAnim("catch_up", this.CATCH_UP)
                         .triggerableAnim("idle", this.IDLE)
@@ -623,6 +632,7 @@ public class CaveDwellerEntity extends Monster implements GeoEntity {
                     if (this.isInStandoff()) {
                         return state.setAndContinue(this.STANDOFF);
                     }
+
                     return software.bernie.geckolib.core.object.PlayState.STOP;
                 })
         });
@@ -817,13 +827,8 @@ public class CaveDwellerEntity extends Monster implements GeoEntity {
             int holdTime = Utils.ticksToSeconds((this.initializationDelayTicks * 3) + 10);
             this.triggerJawMovement(4.0F,6.5F, holdTime);
             this.canPlayJawMovement = false;
-            switch (this.random.nextInt(4)) {
-                case 0 -> this.playEntitySound(ModSounds.TRANSITION_1, 3.0F, 1.0F);
-                case 1 -> this.playEntitySound(ModSounds.TRANSITION_2, 3.0F, 1.0F);
-                case 2 -> this.playEntitySound(ModSounds.TRANSITION_3, 3.0F, 1.0F);
-                case 3 -> this.playEntitySound(ModSounds.TRANSITION_4, 3.0F, 1.0F);
-            }
 
+            this.playEntitySound(ModSounds.CAVEDWELLER_TRANSITION, 3.0F, 1.0F);
             this.chaseSoundClock = this.initializationDelayTicks;
             this.canPlayChaseSound = true;
         }
@@ -834,12 +839,7 @@ public class CaveDwellerEntity extends Monster implements GeoEntity {
             if (this.chaseSoundClock <= 0) {
                 this.triggerJawMovement(4.0F, 6.0F, 1.8F);
                 this.canPlayJawMovement = true;
-                switch (this.random.nextInt(4)) {
-                    case 0 -> this.playEntitySound(ModSounds.CHASE_1, 3.0F, 1.0F);
-                    case 1 -> this.playEntitySound(ModSounds.CHASE_2, 3.0F, 1.0F);
-                    case 2 -> this.playEntitySound(ModSounds.CHASE_3, 3.0F, 1.0F);
-                    case 3 -> this.playEntitySound(ModSounds.CHASE_4, 3.0F, 1.0F);
-                }
+                this.playEntitySound(ModSounds.CAVEDWELLER_CHASE, 3.0F, 1.0F);
 
                 this.canPlayChaseSound = true;
                 this.resetChaseSoundClock();
@@ -861,7 +861,7 @@ public class CaveDwellerEntity extends Monster implements GeoEntity {
                     this.getX(),
                     this.getY(),
                     this.getZ(),
-                    ModSounds.DISAPPEAR,
+                    ModSounds.CAVEDWELLER_DISAPPEAR,
                     SoundSource.HOSTILE,
                     1.0F,
                     1.0F
@@ -877,11 +877,6 @@ public class CaveDwellerEntity extends Monster implements GeoEntity {
         }
     }
 
-    @Override
-    protected float getSoundVolume() {
-        return 0.4F;
-    }
-
     protected float getRandomPitch() {
         float pitch = this.random.nextFloat();
         return Mth.clamp(pitch, 0.9F, 1.1F);
@@ -891,18 +886,10 @@ public class CaveDwellerEntity extends Monster implements GeoEntity {
         if (!this.startedPlayingBreathingSound && !this.isDeadOrDying()) {
             if (this.breathingSoundClock <= 0) {
                 if ((!this.isMoving() && !this.isAggro && !this.stalking)) {
-                    if (this.random.nextBoolean()) {
-                        this.playEntitySound(ModSounds.IDLE_1, 3.0F, randomPitch);
-                    } else {
-                        this.playEntitySound(ModSounds.IDLE_2, 3.0F, randomPitch);
-                    }
+                    this.playEntitySound(ModSounds.CAVEDWELLER_IDLE, 3.0F, randomPitch);
                     // TODO: prevent breathing from playing if playing chase sound?
                 } else if (this.isMoving() && this.isAggro) {
-                    switch (this.random.nextInt(3)) {
-                        case 0 -> this.playEntitySound(ModSounds.BREATHING_1, 3.0F, 1.0F);
-                        case 1 -> this.playEntitySound(ModSounds.BREATHING_2, 3.0F, 1.0F);
-                        case 2 -> this.playEntitySound(ModSounds.BREATHING_3, 3.0F, 1.0F);
-                    }
+                    this.playEntitySound(ModSounds.CAVEDWELLER_BREATHING, 3.0F, 1.0F);
                 } else {
                     return;
                 }
@@ -934,7 +921,7 @@ public class CaveDwellerEntity extends Monster implements GeoEntity {
                 if (target instanceof ServerPlayer serverPlayer) {
                     float pitch = this.isAggro ? 1.1F : 1.0F;
                     serverPlayer.connection.send(new ClientboundSoundPacket(
-                            BuiltInRegistries.SOUND_EVENT.wrapAsHolder(ModSounds.HEARTBEAT),
+                            BuiltInRegistries.SOUND_EVENT.wrapAsHolder(ModSounds.CAVEDWELLER_HEARTBEAT),
                             SoundSource.HOSTILE,
                             serverPlayer.getX(),
                             serverPlayer.getY(),
@@ -977,16 +964,11 @@ public class CaveDwellerEntity extends Monster implements GeoEntity {
             double spottedSoundDistance = 121.0D;
             SoundEvent selectedSound;
             if (this.distanceToSqr(player) <= spottedSoundDistance) {
-                selectedSound = switch (this.random.nextInt(3)) {
-                    case 0 -> ModSounds.SPOTTED_1;
-                    case 1 -> ModSounds.SPOTTED_2;
-                    default -> ModSounds.SPOTTED_3;
-                };
+                selectedSound = ModSounds.CAVEDWELLER_SPOTTED;
             } else {
-                selectedSound = ModSounds.SPOTTED_DISTANT;
+                selectedSound = ModSounds.CAVEDWELLER_SPOTTED_DISTANT;
             }
 
-            //player.playNotifySound(selectedSound, SoundSource.HOSTILE, 1.0F, 1.0F);
             this.level().playSound((Player) null, this.getX(), this.getY(), this.getZ(), selectedSound, SoundSource.HOSTILE, 3.0F, 1.0F);
         }
 
@@ -995,13 +977,7 @@ public class CaveDwellerEntity extends Monster implements GeoEntity {
 
     public void playClimbSound() {
         if (this.climbSoundClock <= 0) {
-            switch (this.random.nextInt(4)) {
-                case 0 -> this.playEntitySound(ModSounds.CLIMB_1, 1.0F, 1.0F);
-                case 1 -> this.playEntitySound(ModSounds.CLIMB_2, 1.0F, 1.0F);
-                case 2 -> this.playEntitySound(ModSounds.CLIMB_3, 1.0F, 1.0F);
-                case 3 -> this.playEntitySound(ModSounds.CLIMB_4, 1.0F, 1.0F);
-            }
-
+            this.playEntitySound(ModSounds.CAVEDWELLER_CLIMB, 1.0F, 1.0F);
             this.resetClimbSoundClock();
         }
 
@@ -1093,57 +1069,15 @@ public class CaveDwellerEntity extends Monster implements GeoEntity {
 
     /// Choosing sounds
     private SoundEvent chooseStep() {
-        
-        switch (this.random.nextInt(4)) {
-            case 0 -> {
-                return ModSounds.STEP_1;
-            }
-            case 1 -> {
-                return ModSounds.STEP_2;
-            }
-            case 2 -> {
-                return ModSounds.STEP_3;
-            }
-            default -> {
-                return ModSounds.STEP_4;
-            }
-        }
+        return ModSounds.CAVEDWELLER_STEP;
     }
 
     private SoundEvent chooseHurtSound() {
-        
-        switch (this.random.nextInt(4)) {
-            case 0 -> {
-                return ModSounds.HURT_1;
-            }
-            case 1 -> {
-                return ModSounds.HURT_2;
-            }
-            case 2 -> {
-                return ModSounds.HURT_3;
-            }
-            default -> {
-                return ModSounds.HURT_4;
-            }
-        }
+        return ModSounds.CAVEDWELLER_HURT;
     }
 
     protected SoundEvent chooseDeathSound() {
-        
-        switch (this.random.nextInt(4)) {
-            case 0 -> {
-                return ModSounds.DWELLER_DEATH_1;
-            }
-            case 1 -> {
-                return ModSounds.DWELLER_DEATH_2;
-            }
-            case 2 -> {
-                return ModSounds.DWELLER_DEATH_3;
-            }
-            default -> {
-                return ModSounds.DWELLER_DEATH_4;
-            }
-        }
+        return ModSounds.CAVEDWELLER_DEATH;
     }
 
     @Override
@@ -1189,7 +1123,7 @@ public class CaveDwellerEntity extends Monster implements GeoEntity {
     public boolean isMoving() {
         Vec3 velocity = this.getDeltaMovement();
         float avgVelocity = (float) (Math.abs(velocity.x) + Math.abs(velocity.z)) / 2.0F;
-        return avgVelocity > 0.02F;
+        return avgVelocity > 0.002F;
     }
 
     // Hacky pathfinding fix
@@ -1286,12 +1220,20 @@ public class CaveDwellerEntity extends Monster implements GeoEntity {
         if (target != null) {
             double yDiff = target.getY() - this.getY();
 
-            if (yDiff > 2.0 && yDiff <= 3.0 && (!this.getEntityData().get(CaveDwellerEntity.CLIMBING_ACCESSOR) && !this.isSubmerged)) {
-                shouldJump = true;
+            if (yDiff > 2.0 && yDiff <= 2.5 && (!this.getEntityData().get(CaveDwellerEntity.CLIMBING_ACCESSOR) && !this.isSubmerged)) {
+               shouldJump = this.isMoving();
             }
         }
 
         super.setJumping(shouldJump);
+    }
+
+    public boolean needsToCatchUp() {
+        return this.entityData.get(CATCH_UP_ACCESSOR);
+    }
+
+    public void setNeedsToCatchUp(boolean needsToCatchUp) {
+        this.entityData.set(CATCH_UP_ACCESSOR, needsToCatchUp);
     }
 
     /// Custom name code
@@ -1323,6 +1265,7 @@ public class CaveDwellerEntity extends Monster implements GeoEntity {
         SQUEEZING_ACCESSOR = SynchedEntityData.defineId(CaveDwellerEntity.class, EntityDataSerializers.BOOLEAN);
         SPOTTED_ACCESSOR = SynchedEntityData.defineId(CaveDwellerEntity.class, EntityDataSerializers.BOOLEAN);
         STANDOFF_ACCESSOR = SynchedEntityData.defineId(CaveDwellerEntity.class, EntityDataSerializers.BOOLEAN);
+        CATCH_UP_ACCESSOR = SynchedEntityData.defineId(CaveDwellerEntity.class, EntityDataSerializers.BOOLEAN);
         CLIMBING_ACCESSOR = SynchedEntityData.defineId(CaveDwellerEntity.class, EntityDataSerializers.BOOLEAN);
         STALKING_ACCESSOR = SynchedEntityData.defineId(CaveDwellerEntity.class, EntityDataSerializers.BOOLEAN);
     }

@@ -6,6 +6,7 @@ import com.thecaptain.cavedweller.registry.ModEntityTypes;
 import com.thecaptain.cavedweller.registry.ModSounds;
 import com.thecaptain.cavedweller.util.Utils;
 
+import java.util.List;
 import java.util.Random;
 import java.util.function.BooleanSupplier;
 
@@ -22,13 +23,21 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LightLayer;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
+import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+
+import static com.thecaptain.cavedweller.registry.ModSounds.CAVEDWELLER_AMBIENT;
 
 @Mixin(ServerLevel.class)
 public abstract class MixinServerWorld {
+    @Shadow
+    @Final
+    private List<ServerPlayer> players;
     private static boolean doReload = true;
     private final java.util.List<net.minecraft.server.level.ServerPlayer> spelunkers = new java.util.ArrayList<>();
     java.util.Map<java.util.UUID, PlayerTimerData> playerTimerLedger = new java.util.HashMap<>();
@@ -38,6 +47,9 @@ public abstract class MixinServerWorld {
     private int scanTicks = 0;
     private int randomlySelectedBrightnessLevel;
     private boolean shouldTickTimers;
+    private boolean isSpawnedStalking;
+    private Vec3 caveDwellerPos;
+    private boolean notLookingAtDweller;
     // Scoreboard
     private String calmTimerMinsAndSecs;
     private String vanillaNoiseTimerMinsAndSecs;
@@ -257,24 +269,12 @@ public abstract class MixinServerWorld {
         float maxVol = 1.0F;
         float dynamicVolume = minVol + (maxVol - minVol) * weight;
 
-        SoundEvent selectedSound = switch (this.random.nextInt(9)) {
-            case 0 -> ModSounds.CAVENOISE_1;
-            case 1 -> ModSounds.CAVENOISE_2;
-            case 2 -> ModSounds.CAVENOISE_3;
-            case 3 -> ModSounds.CAVENOISE_4;
-            case 4 -> ModSounds.CAVENOISE_5;
-            case 5 -> ModSounds.CAVENOISE_6;
-            case 6 -> ModSounds.CAVENOISE_7;
-            case 7 -> ModSounds.CAVENOISE_8;
-            default -> ModSounds.CAVENOISE_9;
-        };
-
         double targetX = player.getX() + (double) (-6 + this.random.nextInt(13));
         double targetY = player.getY();
         double targetZ = player.getZ() + (double) (-6 + this.random.nextInt(13));
 
         ServerLevel serverLevel = player.serverLevel();
-        serverLevel.playSound(null, targetX, targetY, targetZ, selectedSound, SoundSource.AMBIENT, dynamicVolume, 1.0F);
+        serverLevel.playSound(null, targetX, targetY, targetZ, ModSounds.CAVEDWELLER_AMBIENT, SoundSource.AMBIENT, dynamicVolume, 1.0F);
         data.currentlyPlayingNoise = false;
 
         return true;
@@ -282,29 +282,21 @@ public abstract class MixinServerWorld {
 
     // Phase 3: Stalk / Failed spawn attempt Noises
     public boolean playStalkNoiseToSpelunkers(ServerPlayer player, PlayerTimerData data) {
-
-        SoundEvent selectedSound = switch (this.random.nextInt(5)) {
-            case 0 -> ModSounds.STALK_1;
-            case 1 -> ModSounds.STALK_2;
-            case 3 -> ModSounds.STALK_4;
-            case 2 -> ModSounds.STALK_3;
-            default -> ModSounds.STALK_5;
-        };
-
         double targetX = player.getX() + (double) (-6 + this.random.nextInt(13));
         double targetY = player.getY();
         double targetZ = player.getZ() + (double) (-6 + this.random.nextInt(13));
 
         ServerLevel serverLevel = player.serverLevel();
-        serverLevel.playSound(null, targetX, targetY, targetZ, selectedSound, SoundSource.AMBIENT, 1.0F, 1.0F);
+        serverLevel.playSound(null, targetX, targetY, targetZ, ModSounds.CAVEDWELLER_STALK, SoundSource.AMBIENT, 1.0F, 1.0F);
 
         data.currentlyPlayingNoise = false;
 
         return true;
     }
-
+    
     @Inject(method = "tick", at = @At("TAIL"))
     public void tickServer(BooleanSupplier booleanSupplier, CallbackInfo ci) {
+        
         ServerLevel overworld = (ServerLevel) (Object) this;
         if (overworld == null) {
             return;
@@ -314,15 +306,31 @@ public abstract class MixinServerWorld {
             this.debug = CaveDweller.CONFIG.DEBUG();
             this.playerTimerLedger.clear();
             this.spelunkers.clear();
-            this.randomlySelectedBrightnessLevel = (this.random.nextInt(6, 8));
+            this.randomlySelectedBrightnessLevel = (this.random.nextInt(12, 15));
             this.resetScoreboard(overworld);
         }
 
+        // Get cave dweller info
         Iterable<Entity> entities = overworld.getAllEntities();
         java.util.concurrent.atomic.AtomicBoolean dwellerExists = new java.util.concurrent.atomic.AtomicBoolean(false);
         for (Entity entity : entities) {
-            if (entity instanceof CaveDwellerEntity) {
+            if (entity instanceof CaveDwellerEntity caveDweller) {
                 dwellerExists.set(true);
+                if (caveDweller.spawnedStalking) {
+                    this.isSpawnedStalking = true;
+                }
+                Vec3 rawPos = caveDweller.position();
+                this.caveDwellerPos = new Vec3((int) rawPos.x, (int) rawPos.y, (int) rawPos.z);
+                this.isDwellerCurrentlyAggro = caveDweller.getEntityData().get(CaveDwellerEntity.AGGRO_ACCESSOR);
+                this.currentGoal = caveDweller.currentRoll;
+
+                if (isDwellerCurrentlyAggro) {
+                    this.dwellerAliveTimer = caveDweller.ticksUntilRemoveChase;
+                } else {
+                    this.dwellerAliveTimer = caveDweller.ticksUntilRemove;
+                }
+
+                this.notLookingAtDweller = !caveDweller.targetIsLookingAtMe;
                 break;
             }
         }
@@ -450,21 +458,33 @@ public abstract class MixinServerWorld {
                     }
                 }
                 case 3 -> {
-                    this.currentActivePhaseName = "§4" + "§l" + "Stalk phase (Phase 3)";
+                    this.currentActivePhaseName = "§4" + "§l" + "Spawn phase (Phase 3)";
                     data.ticksUntilNextPhase = 0;
                     data.vanillaCaveNoiseTimer = -1;
-                    data.dwellerCaveNoiseTimer = -1;
                     data.caveNoiseTimerCheck();
-                    //if (data.stalkNoiseTimer <= 0 && !this.isDwellerCurrentlyAggro) {
-                    if (data.stalkNoiseTimer <= 0) {
-                        ServerPlayer targetPlayer = (ServerPlayer) overworld.getPlayerByUUID(playerUuid);
-                        if (targetPlayer != null && !data.currentlyPlayingNoise) {
-                            data.currentlyPlayingNoise = true;
-                            this.playStalkNoiseToSpelunkers(targetPlayer, data);
+                    if (this.isSpawnedStalking) {
+                        data.dwellerCaveNoiseTimer = -1;
+                        if (data.stalkNoiseTimer <= 0 && !this.isDwellerCurrentlyAggro && this.notLookingAtDweller) {
+                            ServerPlayer targetPlayer = (ServerPlayer) overworld.getPlayerByUUID(playerUuid);
+
+                            if (targetPlayer != null && !data.currentlyPlayingNoise) {
+                                data.currentlyPlayingNoise = true;
+                                this.playStalkNoiseToSpelunkers(targetPlayer, data);
+                            }
+                            data.resetStalkNoiseTimer();
+                            data.currentlyPlayingNoise = false;
                         }
-                        data.resetStalkNoiseTimer();
+                    } else {
+                        data.stalkNoiseTimer = -1;
+                        if (data.dwellerCaveNoiseTimer <= 0) {
+                            ServerPlayer targetPlayer = (ServerPlayer) overworld.getPlayerByUUID(playerUuid);
+                            if (targetPlayer != null && !data.currentlyPlayingNoise) {
+                                data.currentlyPlayingNoise = true;
+                                this.playDwellerCaveNoiseToSpelunkers(targetPlayer, data);
+                            }
+                            data.resetDwellerCaveNoiseTimer();
+                        }
                     }
-                    data.currentlyPlayingNoise = false;
                 }
                 default -> {
                     this.currentActivePhaseName = "§l" + "Quiet (Phase 0)";
@@ -523,19 +543,26 @@ public abstract class MixinServerWorld {
                         if (targetPlayer != null) {
                             if (!data.currentlyPlayingNoise) {
                                 data.currentlyPlayingNoise = true;
-                                this.playStalkNoiseToSpelunkers(targetPlayer, data);
+                                if (this.isSpawnedStalking) {
+                                    this.playStalkNoiseToSpelunkers(targetPlayer, data);
+                                } else {
+                                    this.playDwellerCaveNoiseToSpelunkers(targetPlayer, data);
+                                }
                             }
 
                             CaveDwellerEntity caveDweller = new CaveDwellerEntity(ModEntityTypes.CAVEDWELLER, overworld);
                             Vec3 spawnPos = caveDweller.generatePos(targetPlayer);
 
                             if (spawnPos != null) {
-                                System.out.println("spawned");
+                                if (this.isSpawnedStalking) {
+                                    System.out.println("spawned stalking");
+                                } else {
+                                    System.out.println("spawned");
+                                }
                                 caveDweller.moveTo(spawnPos.x, spawnPos.y, spawnPos.z, 0.0F, 0.0F);
                                 caveDweller.setInvisible(true);
                                 overworld.addFreshEntity(caveDweller);
                             } else {
-                                System.out.println("pos is null");
                                 data.resetCalmTimer();
                             }
 
@@ -552,8 +579,10 @@ public abstract class MixinServerWorld {
                 }
             }
 
-            if (dwellerExists.get() && data.calmTimer == -1) {
-                --data.stalkNoiseTimer;
+            if (this.isSpawnedStalking){
+                if (dwellerExists.get() && data.calmTimer == -1) {
+                    --data.stalkNoiseTimer;
+                }
             }
             if (dwellerExists.get() && data.calmTimer <= 0) {
                 data.calmTimer = -1;
@@ -617,7 +646,7 @@ public abstract class MixinServerWorld {
     public String[] getScoreboardText(PlayerTimerData data) {
         String gracePeriodSB;
 
-        if (data.gracePeriod < 200) {
+        if (data.gracePeriod < Utils.secondsToTicks(10)) {
             gracePeriodSB = "§2Grace period: §4" + Utils.ticksToMinutesAndSeconds(data.gracePeriod);
         } else {
             gracePeriodSB = "§2Grace period: §6" + Utils.ticksToMinutesAndSeconds(data.gracePeriod);
@@ -625,25 +654,31 @@ public abstract class MixinServerWorld {
 
         String calmTimerMaxPossibleSecondsSB = "§fCalm Timer Max Possible: §6" + Utils.ticksToSeconds(data.calmTimerMax) + "s§f (§6" + data.calmTimerMax + "t§f)";
 
-        int localCalmSecs = data.calmTimer < 0 ? -1 : data.calmTimer / 20;
-        String calmTimerTicksSB = "§fCalm Timer (ticks): §6" + (localCalmSecs == -1? this.timerInactive : data.calmTimer + "t§r");
-        String calmTimerMinutesSecondsSB = "§fCalm Timer (minutes): §6" + (localCalmSecs == -1? this.timerInactive : Utils.ticksToMinutesAndSeconds(data.calmTimer));
+        int localCalmTimerSecs = data.calmTimer < 0 ? -1 : data.calmTimer / 20;
+        String calmTimerTicksSB = "§fCalm Timer (ticks): §6" + (localCalmTimerSecs == -1? this.timerInactive : data.calmTimer + "t§r");
+        String calmTimerMinutesSecondsSB = "§fCalm Timer (minutes): §6" + (localCalmTimerSecs == -1? this.timerInactive : Utils.ticksToMinutesAndSeconds(data.calmTimer));
 
         String currentActivePhaseSB = "§fActive phase: " + this.currentActivePhaseName;
 
         String phase1StartSB = "§aPhase 1 §fstarts at §6" + this.phase1StartPercent + "%§f, or at §6" + this.phase1StartMinsAndSecs;
 
-        int localVanillaSecs = data.vanillaCaveNoiseTimer < 0 ? -1 : data.vanillaCaveNoiseTimer / 20;
-        String vanillaTimerMinutesSecondsSB = "§aVanilla Cave Noise Timer (minutes): §6" + (localVanillaSecs == -1 ? this.timerInactive : Utils.ticksToMinutesAndSeconds(data.vanillaCaveNoiseTimer));
+        int localVanillaTimerSecs = data.vanillaCaveNoiseTimer < 0 ? -1 : data.vanillaCaveNoiseTimer / 20;
+        String vanillaTimerMinutesSecondsSB = "§aVanilla Cave Noise Timer (minutes): §6" + (localVanillaTimerSecs == -1 ? this.timerInactive : Utils.ticksToMinutesAndSeconds(data.vanillaCaveNoiseTimer));
 
         String phase2StartSB = "§bPhase 2 §fstarts at §6" + this.phase2StartPercent + "%§f, or at §6" + this.phase2StartMinsAndSecs;
 
-        int localDwellerSecs = data.dwellerCaveNoiseTimer < 0 ? -1 : data.dwellerCaveNoiseTimer / 20;
-        String dwellerTimerMinutesSecondsSB = "§bDweller Cave Noise Timer (minutes): §6" + (localDwellerSecs == -1 ? this.timerInactive : Utils.ticksToMinutesAndSeconds(data.dwellerCaveNoiseTimer));
+        int localDwellerTimerSecs = data.dwellerCaveNoiseTimer < 0 ? -1 : data.dwellerCaveNoiseTimer / 20;
+        String dwellerTimerMinutesSecondsSB = "§bDweller Cave Noise Timer (minutes): §6" + (localDwellerTimerSecs == -1 ? this.timerInactive : Utils.ticksToMinutesAndSeconds(data.dwellerCaveNoiseTimer));
 
-        String dwellerExistsSB = "§6Dweller exists? " + (this.dwellerExistsFlag ? "§4YES§r" : "§cNO§r");
+        String dwellerExistsSB = "§6Dweller exists? " + (this.dwellerExistsFlag ? "§4YES, at: §r" + this.caveDwellerPos : "§cNO§r");
+
         String lifetimeText = Utils.ticksToMinutesAndSeconds(this.dwellerAliveTimer);
-        String dwellerLifetimeSB = "§4Dweller currently exists for §6" + (this.dwellerAliveTimer <= 0 ? "0:00" : lifetimeText) + "§4 more";
+        String dwellerLifetimeSB;
+        if (this.dwellerAliveTimer <= 0) {
+            dwellerLifetimeSB = "§4Dweller disappearing once out of sight...";
+        } else {
+            dwellerLifetimeSB = "§4Dweller currently exists for §6" + lifetimeText + "§4 more";
+        }
 
         int localStalkSecs = data.stalkNoiseTimer < 0 ? -1 : data.stalkNoiseTimer / 20;
         String stalkNoiseTimerMinutesSecondsSB = "§4Stalk Noise Timer (minutes): §6" + (localStalkSecs == -1 ? this.timerInactive : Utils.ticksToMinutesAndSeconds(data.stalkNoiseTimer));
@@ -651,7 +686,7 @@ public abstract class MixinServerWorld {
         String goalText = this.currentGoal != null ? this.currentGoal.name() : "NONE";
         String dwellerCurrentGoalSB = "§4Current goal: §6" + goalText;
 
-        if (this.dwellerExistsFlag) {
+        if (this.dwellerExistsFlag && this.isSpawnedStalking) {
             return new String[]{
                     gracePeriodSB,
                     calmTimerMaxPossibleSecondsSB,
@@ -664,10 +699,10 @@ public abstract class MixinServerWorld {
                     dwellerTimerMinutesSecondsSB,
                     dwellerExistsSB,
                     dwellerLifetimeSB,
-                    stalkNoiseTimerMinutesSecondsSB,
-                    dwellerCurrentGoalSB
+                    dwellerCurrentGoalSB,
+                    stalkNoiseTimerMinutesSecondsSB
             };
-        } else {
+        } else if (this.dwellerExistsFlag) {
             return new String[]{
                     gracePeriodSB,
                     calmTimerMaxPossibleSecondsSB,
@@ -678,8 +713,24 @@ public abstract class MixinServerWorld {
                     vanillaTimerMinutesSecondsSB,
                     phase2StartSB,
                     dwellerTimerMinutesSecondsSB,
-                    dwellerExistsSB
+                    dwellerExistsSB,
+                    dwellerLifetimeSB,
+                    dwellerCurrentGoalSB,
+                    "§6(Did not spawn stalking)"
             };
+        } else {
+        return new String[]{
+                gracePeriodSB,
+                calmTimerMaxPossibleSecondsSB,
+                calmTimerTicksSB,
+                calmTimerMinutesSecondsSB,
+                currentActivePhaseSB,
+                phase1StartSB,
+                vanillaTimerMinutesSecondsSB,
+                phase2StartSB,
+                dwellerTimerMinutesSecondsSB,
+                dwellerExistsSB
+        };
         }
     }
 
@@ -756,7 +807,7 @@ public abstract class MixinServerWorld {
         }
 
         int blockLightLevel = serverLevel.getBrightness(LightLayer.BLOCK, playerPos);
-        if (blockLightLevel > this.randomlySelectedBrightnessLevel) {
+        if (blockLightLevel >= this.randomlySelectedBrightnessLevel) {
             return false;
         }
 

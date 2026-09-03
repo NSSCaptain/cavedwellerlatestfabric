@@ -35,7 +35,7 @@ public class DwellerStalkGoal extends Goal {
     }
 
     private Player getTargetToStalk() {
-        return this.caveDweller.level().getNearestPlayer(this.caveDweller.getX(), this.caveDweller.getY(), this.caveDweller.getZ(), 200.0D, Utils::isValidPlayer);
+        return this.caveDweller.level().getNearestPlayer(this.caveDweller.getX(), this.caveDweller.getY(), this.caveDweller.getZ(), CaveDweller.CONFIG.SPOTTING_RANGE(), Utils::isValidPlayer);
     }
 
     @Override
@@ -91,7 +91,6 @@ public class DwellerStalkGoal extends Goal {
 
         this.caveDweller.pleaseStopMoving = false;
         this.caveDweller.getEntityData().set(CaveDwellerEntity.STALKING_ACCESSOR, true);
-        this.caveDweller.getEntityData().set(CaveDwellerEntity.SQUEEZING_ACCESSOR, true);
         this.caveDweller.refreshDimensions();
         this.flipClock = 0;
         int minTicksTillFlip = 400;
@@ -104,8 +103,6 @@ public class DwellerStalkGoal extends Goal {
         this.caveDweller.stalking = false;
         this.caveDweller.getEntityData().set(CaveDwellerEntity.STALKING_ACCESSOR, false);
         this.caveDweller.getNavigation().stop();
-        this.caveDweller.getEntityData().set(CaveDwellerEntity.SQUEEZING_ACCESSOR, false);
-        this.caveDweller.refreshDimensions();
         this.target = null;
         super.stop();
     }
