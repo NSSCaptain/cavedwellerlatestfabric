@@ -2,7 +2,7 @@
 
 ## Full disclosure
 
-While about 70-80% of this project is a mix between Gargin's original code and the open-source fabric port, this project has been *heavily* assisted with Gemini. Of course, I haven't just copy-pasted its code and done nothing with it. I've been learning Java modding through this whole process and have been double-checking that all the provided code is functional, and I would not promote this if I didn't playtest it thoroughly. The parts it has helped out with it primarily the math, rendering, and multiplayer code. Since I've been working on this solo, I have no idea if the multiplayer code works as expected. It all works in single player though, at the very least.
+While about 70-80% of this project is a mix between Gargin's original code and the open-source fabric port, this project has been *heavily* assisted with Gemini. Of course, I haven't just copy-pasted its code and done nothing with it. I've been learning Java modding through this whole process and have been double-checking that all the provided code is functional, and I would not promote this if I didn't playtest it thoroughly. The parts it has helped out with is primarily the math, rendering, and multiplayer code. Since I've been working on this solo, I have no idea if the multiplayer code works as expected. It all works in single player though, at the very least.
 
 If Gargin requests that I take this down, I will, full-stop.
 
@@ -17,6 +17,17 @@ No. I started this whole project because the latest version of the Gargin Cave D
 ## Will this be on Modrinth/CurseForge?
 
 Since most of the assets used are not my own, I don't know the extent to which I can upload this. If I were to upload it anywhere, it'd be on Modrinth. Furthermore, I do not support CurseForge, since Curse is owned by an Israeli software company (Overwolf).
+
+## Plans
+
+- Add "peeking" behaviors
+- Add "catching up" behavior, for when player is too far away
+- Add burnt-out torch mechanic (currently breaks torches)
+- Add ability to remove helmet/held item while attacking
+- Add giving slowness when it's struck before chasing begins
+- Add Dwellings (MAYBE)
+- Add Moth (MAYBE)
+- And more...
 
 ## Credits
 
