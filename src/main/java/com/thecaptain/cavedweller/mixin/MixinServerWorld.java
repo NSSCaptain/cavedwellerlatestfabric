@@ -405,12 +405,39 @@ public abstract class MixinServerWorld {
                 }
             }
 
+            // Surface check (ensures players who are in full view of the sky have their grace timers and calm timers reset)
+            BlockPos playerPos = targetPlayer.blockPosition();
+
+            boolean isOnSurface = !CaveDweller.CONFIG.ALLOW_SURFACE_SPAWN() &&
+                    playerPos.getY() >= overworld.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, playerPos.getX(), playerPos.getZ());
+            boolean exceedsSpawnHeight = !CaveDweller.CONFIG.ALLOW_SURFACE_SPAWN() &&
+                    targetPlayer.getY() > (double) CaveDweller.CONFIG.SPAWN_HEIGHT();
+
+            if (isOnSurface || exceedsSpawnHeight) {
+                data.resetCalmTimer();
+                iterator.remove();
+                continue;
+            }
+
+            int skyLightLevel = overworld.getBrightness(LightLayer.SKY, playerPos) - overworld.getSkyDarken();
+            if (skyLightLevel > 0) {
+                float sunAngle = overworld.getSunAngle(1.0F);
+                float f1 = sunAngle < (float) Math.PI ? 0.0F : ((float) Math.PI * 2F);
+                sunAngle += (f1 - sunAngle) * 0.2F;
+                skyLightLevel = Math.round((float) skyLightLevel * Mth.cos(sunAngle));
+            }
+            skyLightLevel = Mth.clamp(skyLightLevel, 0, 15);
+
+            if (data.gracePeriod >= 0 && skyLightLevel > CaveDweller.CONFIG.SKY_LIGHT_LEVEL()) {
+                data.resetCalmTimer();
+                iterator.remove();
+            }
+
             // Torch burnout
             if (targetPlayer != null) {
                 ServerLevel level = targetPlayer.serverLevel();
 
                 if ((data.activePhase == 1 || data.activePhase == 2) && data.burnoutEventTimer <= 0) {
-                    BlockPos playerPos = targetPlayer.blockPosition();
                     List<BlockPos> torchPositions = new ArrayList<>();
 
                     Block burntOutTorchBlock = ModBlocks.getBurntOutTorch();
@@ -739,7 +766,6 @@ public abstract class MixinServerWorld {
             return false;
         }
 
-        // If surface spawning is enabled, players at any height can trigger a spawn attempt
         if (!CaveDweller.CONFIG.ALLOW_SURFACE_SPAWN() && player.getY() > (double) CaveDweller.CONFIG.SPAWN_HEIGHT()) {
             return false;
         }
@@ -747,7 +773,6 @@ public abstract class MixinServerWorld {
         Level serverLevel = player.level();
         BlockPos playerPos = player.blockPosition();
 
-        // Dynamic real-time skylight adjustments factoring day/night cycle angles
         int skyLightLevel = serverLevel.getBrightness(LightLayer.SKY, playerPos) - serverLevel.getSkyDarken();
         if (skyLightLevel > 0) {
             float sunAngle = serverLevel.getSunAngle(1.0F);
@@ -766,8 +791,10 @@ public abstract class MixinServerWorld {
             return false;
         }
 
-        // If surface spawning is globally enabled, let them pass
-        // Otherwise, require them to be completely hidden away from open sky blocks
+        if (CaveDweller.CONFIG.ALLOW_SURFACE_SPAWN()) {
+            return true;
+        }
+
         return CaveDweller.CONFIG.ALLOW_SURFACE_SPAWN() || !serverLevel.canSeeSky(playerPos);
     }
 

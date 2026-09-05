@@ -10,7 +10,7 @@
   "text.config.cave_dweller_config.option.DISAPPEAR.tooltip": "Whether or not to disappear when target becomes invalid.",
 
   "text.config.cave_dweller_config.option.DEBUG": "Debug mode",
-  "text.config.cave_dweller_config.option.DEBUG.tooltip": "SPOILERS! Enables the following:\nA scoreboard showing dweller data/timers\nSlimes with glowing spawning at every spawn attempt\nDweller has glowing applied upon spawning",
+  "text.config.cave_dweller_config.option.DEBUG.tooltip": "SPOILERS! Enables the following:\nA scoreboard showing Dweller data/timers\nSlimes with glowing spawning at every spawn attempt\nDweller has glowing applied upon spawning",
 
   "text.config.cave_dweller_config.option.CHANCE_TO_SPAWN_STALKING": "Chance to spawn stalking",
   "text.config.cave_dweller_config.option.CHANCE_TO_SPAWN_STALKING.tooltip": "From 0% (0.0) to 100% (1.0)\nChance for it to start making it's way to you once spawned in.",
@@ -28,7 +28,7 @@
   "text.config.cave_dweller_config.option.RESET_DWELLER_CAVE_NOISE_MIN.tooltip": "(in seconds)\nThese get louder as it gets closer.",
 
   "text.config.cave_dweller_config.option.RESET_STALK_NOISE_MIN": "Minimum time between stalking noises",
-  "text.config.cave_dweller_config.option.RESET_STALK_NOISE_MIN.tooltip": "(in seconds)\nThese play once it's spawned in, and\nreplace the mod's regular cave noises.\nAssuming it doesn't try to trick you.",
+  "text.config.cave_dweller_config.option.RESET_STALK_NOISE_MIN.tooltip": "(in seconds)\nThese play once it's spawned in (stalking), and\nreplace the mod's regular cave noises.\nAssuming it doesn't try to trick you.",
 
   "text.config.cave_dweller_config.option.RESET_VANILLA_CAVE_NOISE_START_MIN": "Baseline vanilla cave noise cooldown",
   "text.config.cave_dweller_config.option.RESET_VANILLA_CAVE_NOISE_START_MIN.tooltip": "(in seconds)\nA high value creates a quiet start with a long delay between sounds,\nfollowed by a dramatic spike in sound frequency as time runs out.\nA low value triggers cave noises almost immediately,\nkeeping the noises frequent and mostly unchanging.",
@@ -40,13 +40,13 @@
   "text.config.cave_dweller_config.option.ALLOW_SURFACE_SPAWN.tooltip": "Allows for surface spawning.\nNOTE: Will spawn on the surface regardless of spawn height set.\nMay be altered in the future.",
 
   "text.config.cave_dweller_config.option.SKY_LIGHT_LEVEL": "Required sky light level",
-  "text.config.cave_dweller_config.option.SKY_LIGHT_LEVEL.tooltip": "Sets the maximum light threshold required for\nspawning on the surface.",
+  "text.config.cave_dweller_config.option.SKY_LIGHT_LEVEL.tooltip": "Sets the maximum light threshold required for\nspawning on the surface.\nMay be depreciated in the future.",
 
   "text.config.cave_dweller_config.option.BLOCK_LIGHT_LEVEL": "Required block light level",
   "text.config.cave_dweller_config.option.BLOCK_LIGHT_LEVEL.tooltip": "Sets the maximum light threshold required for\nspawning underground.\nRecommended level is below 4.",
 
   "text.config.cave_dweller_config.option.GRACE_PERIOD_BEFORE_RESET": "Default max grace period",
-  "text.config.cave_dweller_config.option.GRACE_PERIOD_BEFORE_RESET.tooltip": "(in seconds)\n'Grace period' is a timer that starts ticking down when\nyou're no longer a 'spelunker' by definition.\nOnce it starts ticking down, all other timers slow to half speed.\nResets to max once you meet the requirements\nto be a spelunker again.",
+  "text.config.cave_dweller_config.option.GRACE_PERIOD_BEFORE_RESET.tooltip": "(in seconds)\n'Grace period' is a timer that starts ticking down when\nyou're no longer a 'spelunker' by definition.\nOnce it hits 0, all timers reset.\nWhen it starts ticking down, all other timers slow to half speed.\nResets to max once you meet the requirements\nto be a spelunker again.",
 
   "text.config.cave_dweller_config.option.SPOTTING_RANGE": "Spotting range",
   "text.config.cave_dweller_config.option.SPOTTING_RANGE.tooltip": "From how far it can spot you.\nAlso determines how far it will search for players.",
@@ -74,7 +74,7 @@
   "text.config.cave_dweller_config.option.ATTACK_RATE.tooltip": "(in times per second)",
 
   "text.config.cave_dweller_config.option.MOVEMENT_SPEED": "Movement speed",
-  "text.config.cave_dweller_config.option.MOVEMENT_SPEED.tooltip": "Used as a basis for ALL movement",
+  "text.config.cave_dweller_config.option.MOVEMENT_SPEED.tooltip": "NOTE: Used as a basis for ALL movement",
 
   "text.config.cave_dweller_config.option.KNOCKBACK_RESISTANCE": "Knockback resistance",
   "text.config.cave_dweller_config.option.KNOCKBACK_RESISTANCE.tooltip": "From 0% (0.0) to 100% (1.0)",
