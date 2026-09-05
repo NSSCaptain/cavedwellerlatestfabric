@@ -4,12 +4,16 @@ import java.util.EnumSet;
 
 import com.thecaptain.cavedweller.CaveDweller;
 import com.thecaptain.cavedweller.entities.CaveDwellerEntity;
+import com.thecaptain.cavedweller.registry.ModBlocks;
 import com.thecaptain.cavedweller.util.Utils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.goal.Goal;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.pathfinder.Path;
@@ -175,8 +179,6 @@ public class DwellerChaseGoal extends Goal {
         if (this.caveDweller.initializationDelayTicks > 0) {
             this.caveDweller.initializationDelayTicks--;
 
-
-            this.caveDweller.playChaseSound();
             this.caveDweller.pleaseStopMoving = true;
             this.caveDweller.setDeltaMovement(Vec3.ZERO);
             this.caveDweller.setNeedsToCatchUp(false);
@@ -253,8 +255,8 @@ public class DwellerChaseGoal extends Goal {
             }
 
             if (path != null && !path.isDone()) {
-                boolean isAboveSolid = !this.caveDweller.level().getBlockState(this.caveDweller.blockPosition().above()).isAir();
-                boolean isNextAboveSolid = !this.caveDweller.level().getBlockState(path.getNextNodePos().above()).isAir();
+                boolean isAboveSolid = this.caveDweller.level().getBlockState(this.caveDweller.blockPosition().above()).blocksMotion();
+                boolean isNextAboveSolid = this.caveDweller.level().getBlockState(path.getNextNodePos().above()).blocksMotion();
                 boolean extraCheck = this.caveDweller.getEntityData().get(CaveDwellerEntity.CROUCHING_ACCESSOR);
                 extraCheck = extraCheck && path.getNextNodePos().getY() > this.caveDweller.blockPosition().getY();
 
@@ -282,6 +284,7 @@ public class DwellerChaseGoal extends Goal {
         this.caveDweller.playChaseSound();
         this.caveDweller.noPhysics = false;
         this.caveDweller.setNoGravity(false);
+
         LivingEntity target = this.caveDweller.getTarget();
         if (this.caveDweller.getNavigation().getPath() != null) {
             BlockPos tempClimbPos = this.checkIfShouldClimbAndReturnPos(this.shortPath);
@@ -370,6 +373,19 @@ public class DwellerChaseGoal extends Goal {
                 this.checkAndPerformAttack(target, distance);
             }
 
+            // Hide when can't reach/see player anymore during chase
+            // TODO: Get it to hid once it loses sight (namely, while in a strip mine), but not when casually chasing?
+            // A) Check if the distance to the player is within 5 blocks
+            double distanceSq = this.caveDweller.distanceToSqr(target);
+            boolean withinSetBlockDistance = distanceSq <= 144.0D; // 12 blocks squared
+            // B) Check if Dweller is not moving
+            boolean isNotMoving = !this.caveDweller.isMoving();
+            // C) Check if Dweller cannot see target or vice versa
+            boolean eitherAreCurrentlyLookingTowardsAndSeeing = this.caveDweller.targetIsLookingAtMe && target.hasLineOfSight(this.caveDweller);
+            if (withinSetBlockDistance && isNotMoving && !eitherAreCurrentlyLookingTowardsAndSeeing) {
+                this.caveDweller.currentRoll = Roll.HIDE;
+            }
+
             // TODO: replace with water logic?
             if (this.caveDweller.isInLava() && this.caveDweller.getNavigation().getPath() != null && this.caveDweller.getNavigation().getPath().getNextNodeIndex() < this.caveDweller.getNavigation().getPath().getNodeCount()) {
                 System.out.println("ticking lava move");
@@ -403,6 +419,9 @@ public class DwellerChaseGoal extends Goal {
                         BlockPos targetBlockPos = currentBlockPos.offset(dX, dY, dZ);
                         BlockState blockstate = this.caveDweller.level().getBlockState(targetBlockPos);
 
+                        Block burntOutTorchBlock = ModBlocks.getBurntOutTorch();
+                        Block burntOutWallTorchBlock = ModBlocks.getBurntOutWallTorch();
+
                         if (blockstate.is(Blocks.TORCH)
                                 || blockstate.is(Blocks.WALL_TORCH)
                                 || blockstate.is(Blocks.SOUL_TORCH)
@@ -412,12 +431,30 @@ public class DwellerChaseGoal extends Goal {
                                 || blockstate.is(net.minecraft.tags.TagKey.create(net.minecraft.core.registries.Registries.BLOCK, new net.minecraft.resources.ResourceLocation("c", "glass_blocks")))
                                 || blockstate.is(net.minecraft.tags.TagKey.create(net.minecraft.core.registries.Registries.BLOCK, new net.minecraft.resources.ResourceLocation("c", "glass_panes"))))
                         {
-                            // TODO: Change this to replace torches with burnt-out versions instead of breaking them
                             if (blockstate.is(Blocks.TORCH)
                                     || blockstate.is(Blocks.WALL_TORCH)
                                     || blockstate.is(Blocks.SOUL_TORCH)
                                     || blockstate.is(Blocks.SOUL_WALL_TORCH)) {
-                                this.caveDweller.level().destroyBlock(targetBlockPos, true, this.caveDweller);
+
+                                BlockState initialBurntState;
+                                if (blockstate.getBlock() instanceof net.minecraft.world.level.block.WallTorchBlock) {
+                                    initialBurntState = burntOutWallTorchBlock.defaultBlockState()
+                                            .setValue(net.minecraft.world.level.block.WallTorchBlock.FACING, blockstate.getValue(net.minecraft.world.level.block.WallTorchBlock.FACING));
+                                } else {
+                                    initialBurntState = burntOutTorchBlock.defaultBlockState();
+                                }
+
+                                initialBurntState = initialBurntState.setValue(com.thecaptain.cavedweller.block.BurntOutTorchBlock.LIGHT, 14);
+                                this.caveDweller.level().setBlock(targetBlockPos, initialBurntState, 3);
+
+                                if (this.caveDweller.level() instanceof ServerLevel serverLevel) {
+                                    serverLevel.sendParticles(
+                                            net.minecraft.core.particles.ParticleTypes.SMOKE,
+                                            targetBlockPos.getX() + 0.5D, targetBlockPos.getY() + 0.7D, targetBlockPos.getZ() + 0.5D,
+                                            12, 0.05D, 0.1D, 0.05D, 0.02D
+                                    );
+                                }
+                                this.caveDweller.level().playSound(null, targetBlockPos, net.minecraft.sounds.SoundEvents.REDSTONE_TORCH_BURNOUT, net.minecraft.sounds.SoundSource.BLOCKS, 1.0F, 1.0F);
                             } else {
                                 this.breakingBlockPos = targetBlockPos;
                                 this.blockBreakProgress = 0.0F;

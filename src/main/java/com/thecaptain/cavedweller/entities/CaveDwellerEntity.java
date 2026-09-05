@@ -79,7 +79,7 @@ public class CaveDwellerEntity extends Monster implements GeoEntity {
     private final RawAnimation STALK_IDLE;
     private final RawAnimation CLIMB_WIDE;
     private final RawAnimation DEATH;
-    private final RawAnimation HURT;
+    private final RawAnimation HIT;
     private final RawAnimation STANDOFF;
     public static final EntityDataAccessor<Boolean> STALKING_ACCESSOR;
     public static final EntityDataAccessor<Boolean> HIDING_ACCESSOR;
@@ -138,6 +138,7 @@ public class CaveDwellerEntity extends Monster implements GeoEntity {
     private boolean shouldDisappearAfterFade;
     public boolean isSubmerged = this.isInWater() || this.level().containsAnyLiquid(this.getBoundingBox());
     public double tooFarThreshold = 4;
+    public boolean spawnedInTunnel;
 
     // DEBUG
     public boolean stalking;
@@ -177,7 +178,7 @@ public class CaveDwellerEntity extends Monster implements GeoEntity {
         this.STALK_IDLE = RawAnimation.begin().then("animation.cave_dweller.stalking_idle", LoopType.LOOP);
         this.CLIMB_WIDE = RawAnimation.begin().then("animation.cave_dweller.climb_wide", LoopType.LOOP);
         this.DEATH = RawAnimation.begin().then("animation.cave_dweller.death", LoopType.HOLD_ON_LAST_FRAME);
-        this.HURT = RawAnimation.begin().then("animation.cave_dweller.hurt", LoopType.PLAY_ONCE);
+        this.HIT = RawAnimation.begin().then("animation.cave_dweller.hit", LoopType.PLAY_ONCE);
         this.STANDOFF = RawAnimation.begin().then("animation.cave_dweller.standoff", LoopType.HOLD_ON_LAST_FRAME);
         this.refreshDimensions();
         this.initializationDelayTicks = 10;
@@ -205,7 +206,7 @@ public class CaveDwellerEntity extends Monster implements GeoEntity {
             this.currentRoll = Roll.STALK;
         } else {
             this.spawnedStalking = false;
-            this.currentRoll = Roll.STROLL;
+            this.currentRoll = Roll.STARE;
         }
         this.noPhysics = false;
         this.setNoGravity(false);
@@ -225,7 +226,7 @@ public class CaveDwellerEntity extends Monster implements GeoEntity {
     @Override
     protected void defineSynchedData() {
         super.defineSynchedData();
-        this.entityData.define(STALKING_ACCESSOR, true);
+        this.entityData.define(STALKING_ACCESSOR, false);
         this.entityData.define(HIDING_ACCESSOR, false);
         this.entityData.define(CROUCHING_ACCESSOR, false);
         this.entityData.define(AGGRO_ACCESSOR, false);
@@ -248,13 +249,13 @@ public class CaveDwellerEntity extends Monster implements GeoEntity {
 
     @Override
     protected void registerGoals() {
-        float distanceThreshold = 2.0F;
+        float distanceThreshold = 4.0F;
         this.goalSelector.addGoal(2, new DwellerBreakInvisGoal(this));
         this.goalSelector.addGoal(1, new DwellerChaseGoal(this, true, 10.0F));
         this.goalSelector.addGoal(1, new DwellerHideGoal(this));
         this.goalSelector.addGoal(2, new DwellerStalkGoal(this, distanceThreshold, true));
         this.goalSelector.addGoal(2, new DwellerStareGoal(this));
-        this.goalSelector.addGoal(3, new DwellerStrollGoal(this, 1.0F));
+        this.goalSelector.addGoal(3, new DwellerStrollGoal(this));
         this.targetSelector.addGoal(2, new DwellerTargetSeesMeGoal(this));
         this.targetSelector.addGoal(1, new DwellerTargetTooCloseGoal(this, distanceThreshold));
     }
@@ -283,13 +284,67 @@ public class CaveDwellerEntity extends Monster implements GeoEntity {
         int minWorldHeight = level.getMinBuildHeight() + 5;
         int safeConfigHeight = Mth.clamp(CaveDweller.CONFIG.SPAWN_HEIGHT(), minWorldHeight, maxWorldHeight);
 
-        int spawnOffsetX = 60;
-        int spawnOffsetY = 12;
-        int spawnOffsetZ = 60;
-
         BlockPos playerPos = victim.blockPosition();
         Vec3 playerLookVec = victim.getViewVector(1.0F).normalize();
         Vec3 playerEyePos = victim.getEyePosition(1.0F);
+
+        // 1/3 chance to spawn behind the player
+        // Disregards light level when this happens
+        if (this.random.nextInt(3) == 0) {
+            int randomDistance = this.random.nextInt(18, 25);
+
+            // Find the cardinal direction the player is looking, then get its exact opposite axis
+            Direction playerDirection = Direction.getNearest(playerLookVec.x, playerLookVec.y, playerLookVec.z);
+            Direction oppositeDirection = playerDirection.getOpposite();
+            BlockPos targetBehindPos = playerPos.relative(oppositeDirection, randomDistance);
+
+            BlockPos.MutableBlockPos checkedPos = new BlockPos.MutableBlockPos(targetBehindPos.getX(), targetBehindPos.getY(), targetBehindPos.getZ());
+            boolean foundFloor = false;
+
+            // Scan up or down locally by 3 blocks from the baseline player tunnel floor
+            for (int yOffset = 3; yOffset >= -3; yOffset--) {
+                checkedPos.set(targetBehindPos.getX(), playerPos.getY() + yOffset, targetBehindPos.getZ());
+                BlockPos belowPos = checkedPos.below();
+                if (level.getBlockState(checkedPos).isAir() && !level.getBlockState(belowPos).isAir()) {
+                    foundFloor = true;
+                    break;
+                }
+            }
+
+            // Fallback: step straight down to the bottom of the world if the tunnel wasn't caught locally
+            if (!foundFloor) {
+                checkedPos.set(targetBehindPos.getX(), playerPos.getY(), targetBehindPos.getZ());
+                while (checkedPos.getY() >= minWorldHeight) {
+                    BlockPos belowPos = checkedPos.below();
+                    if (level.getBlockState(checkedPos).isAir() && !level.getBlockState(belowPos).isAir()) {
+                        foundFloor = true;
+                        break;
+                    }
+                    checkedPos.move(Direction.DOWN);
+                }
+            }
+
+            if (foundFloor) {
+                BlockPos spawnPos = checkedPos.immutable();
+                BlockPos groundPos = spawnPos.below();
+
+                if (spawnPos.getY() < safeConfigHeight && spawnPos.getY() >= minWorldHeight) {
+                    if (level.getBlockState(spawnPos).isAir()
+                            && level.getBlockState(spawnPos.above()).isAir()
+                            && !level.getBlockState(groundPos).isAir()
+                            && level.getFluidState(groundPos).isEmpty()) {
+
+                        this.spawnedInTunnel = true;
+                        return Vec3.atBottomCenterOf(spawnPos);
+                    }
+                }
+            }
+        }
+
+        // Fallback: Default random generation loop if the 1/3 roll fails or position is obstructed
+        int spawnOffsetX = 50;
+        int spawnOffsetY = 10;
+        int spawnOffsetZ = 50;
 
         for (int i = 0; i < 200; i++) {
             int offsetX = this.random.nextInt(spawnOffsetX) - (spawnOffsetX / 2);
@@ -297,27 +352,24 @@ public class CaveDwellerEntity extends Monster implements GeoEntity {
             int offsetZ = this.random.nextInt(spawnOffsetZ) - (spawnOffsetZ / 2);
 
             BlockPos randomPos = playerPos.offset(offsetX, offsetY, offsetZ);
-            BlockPos.MutableBlockPos checkPos = new BlockPos.MutableBlockPos(randomPos.getX(), randomPos.getY(), randomPos.getZ());
+            BlockPos.MutableBlockPos checkedPos = new BlockPos.MutableBlockPos(randomPos.getX(), randomPos.getY(), randomPos.getZ());
 
-            // Step down until finding a solid block underneath
             boolean foundFloor = false;
-            while (checkPos.getY() >= minWorldHeight) {
-                BlockPos belowPos = checkPos.below();
-                if (level.getBlockState(checkPos).isAir() && !level.getBlockState(belowPos).isAir()) {
+            while (checkedPos.getY() >= minWorldHeight) {
+                BlockPos belowPos = checkedPos.below();
+                if (level.getBlockState(checkedPos).isAir() && !level.getBlockState(belowPos).isAir()) {
                     foundFloor = true;
                     break;
                 }
-                checkPos.move(Direction.DOWN);
+                checkedPos.move(Direction.DOWN);
             }
 
             if (!foundFloor) {
                 continue;
             }
 
-            BlockPos spawnPos = checkPos.immutable();
+            BlockPos spawnPos = checkedPos.immutable();
             BlockPos groundPos = spawnPos.below();
-
-            //System.out.println("checked " + groundPos);
 
             Vec3 targetVec = new Vec3(
                     spawnPos.getX() + 0.5 - playerEyePos.x,
@@ -430,9 +482,11 @@ public class CaveDwellerEntity extends Monster implements GeoEntity {
             this.targetSelector.tick();
         }
 
+        LivingEntity target = this.getTarget();
+
         this.refreshDimensions();
-        if (this.getTarget() != null) {
-            this.targetIsLookingAtMe = this.isPlayerLookingTowards(this.getTarget());
+        if (target != null) {
+            this.targetIsLookingAtMe = this.isPlayerLookingTowards(target);
         }
 
         boolean shouldCrouch = false;
@@ -448,6 +502,11 @@ public class CaveDwellerEntity extends Monster implements GeoEntity {
             boolean isOffsetFacingTwoAboveSolid = this.level().getBlockState(this.blockPosition().offset(offset).above().above()).isSolid();
             boolean isOffsetFacingAboveSolid = this.level().getBlockState(this.blockPosition().relative(this.getDirection()).above()).isSolid();
             shouldCrouch = (isTwoAboveSolid || !isOffsetFacingSolid && !isOffsetFacingAboveSolid && isOffsetFacingTwoAboveSolid) && !this.isInWater();
+        }
+
+        if (this.spawnedInTunnel) {
+            shouldCrouch = true;
+            this.spawnedInTunnel = false;
         }
 
         if (shouldCrouch) {
@@ -484,13 +543,11 @@ public class CaveDwellerEntity extends Monster implements GeoEntity {
         }
 
         // Catching up
-        LivingEntity target = this.getTarget();
-        
         if (target != null) {
             double distanceSq = this.distanceToSqr(target);
             double tooFarThresholdSq = (this.tooFarThreshold * this.tooFarThreshold);
             boolean tooFarAway = distanceSq > tooFarThresholdSq;
-            // This is stupid
+            // This is stupid but it works
             boolean needsToCatchUp = tooFarAway && this.isMoving() && this.isAggro && !this.isInStandoff() && this.initializationDelayTicks <= 0;
             this.setNeedsToCatchUp(needsToCatchUp);
         }
@@ -526,6 +583,8 @@ public class CaveDwellerEntity extends Monster implements GeoEntity {
         // Check if spotted
         if (this.entityData.get(SPOTTED_ACCESSOR)) {
             this.playSpottedSound();
+            this.noPhysics = false;
+            this.setNoGravity(false);
         }
 
         // Reset gravity + physics to normal when not climbing unless dying
@@ -554,7 +613,7 @@ public class CaveDwellerEntity extends Monster implements GeoEntity {
     /// Roll
     public void reRoll() {
         this.stalking = false;
-        this.currentRoll = Roll.fromValue(this.random.nextInt(5));
+        this.currentRoll = Roll.fromValue(this.random.nextInt(4));
     }
 
     /// Animation
@@ -590,13 +649,11 @@ public class CaveDwellerEntity extends Monster implements GeoEntity {
             } else {
                 return state.isMoving() ? state.setAndContinue(this.CHASE) : state.setAndContinue(this.STALK_IDLE);
             }
-        }
-        // 3. Hiding state updates
-        else if (this.entityData.get(HIDING_ACCESSOR)) {
-            return state.setAndContinue(this.IDLE);
-        }
+        // 3. Double-check if crouching accessor is true, for when it spawns in a tunnel but is not aggro
+        } else if (this.entityData.get(CROUCHING_ACCESSOR) && !this.isInStandoff()) {
+            return state.isMoving() ? state.setAndContinue(this.CROUCH_RUN) : state.setAndContinue(this.CROUCH_IDLE);
         // 4. Stalking phase updates
-        else if (this.entityData.get(STALKING_ACCESSOR)) {
+        } else if (this.entityData.get(STALKING_ACCESSOR)) {
             return state.isMoving() ? state.setAndContinue(this.CHASE) : state.setAndContinue(this.STALK_IDLE);
         }
         // 5. Standoff state
@@ -606,11 +663,15 @@ public class CaveDwellerEntity extends Monster implements GeoEntity {
         }
         // 6. Spotted state
         // Again, shouldn't be moving unless already having broken out of SPOTTED_ACCESSOR
-        else if (this.entityData.get(SPOTTED_ACCESSOR) && !this.isInStandoff() && !this.needsToCatchUp()) {
-            return state.setAndContinue(this.IDLE);
+        else if (this.entityData.get(SPOTTED_ACCESSOR) && !this.needsToCatchUp() && !this.isInStandoff()) {
+            if (!this.spawnedInTunnel) {
+                return state.setAndContinue(this.IDLE);
+            } else {
+                return state.setAndContinue(this.CROUCH_IDLE);
+            }
         }
-        // 7. Default behavior
-        return state.isMoving() ? state.setAndContinue(this.CROUCH_IDLE) : state.setAndContinue(this.IDLE);
+        // 6. Default behavior
+        return state.isMoving() ? state.setAndContinue(this.CHASE) : state.setAndContinue(this.IDLE);
     }
 
     public void registerControllers(AnimatableManager.ControllerRegistrar controllerRegistrar) {
@@ -625,7 +686,7 @@ public class CaveDwellerEntity extends Monster implements GeoEntity {
                         .triggerableAnim("squeeze", this.SQUEEZE)
                         .triggerableAnim("squeeze_end", this.SQUEEZE_END)
                         .triggerableAnim("death", this.DEATH)
-                        .triggerableAnim("hurt", this.HURT)
+                        .triggerableAnim("hit", this.HIT)
                         .triggerableAnim("standoff", this.STANDOFF),
 
                 new AnimationController<>(this, "override_controller", 3, state -> {
@@ -777,7 +838,7 @@ public class CaveDwellerEntity extends Monster implements GeoEntity {
             if (this.isPlayingHurtAnimation()) {
                 if (!this.isMoving()) {
                     // Ignore the warning; triggerAnim is NOT being overridden here
-                    this.triggerAnim("controller", "hurt");
+                    this.triggerAnim("controller", "hit");
                 }
             }
 
@@ -886,10 +947,10 @@ public class CaveDwellerEntity extends Monster implements GeoEntity {
         if (!this.startedPlayingBreathingSound && !this.isDeadOrDying()) {
             if (this.breathingSoundClock <= 0) {
                 if ((!this.isMoving() && !this.isAggro && !this.stalking)) {
-                    this.playEntitySound(ModSounds.CAVEDWELLER_IDLE, 3.0F, randomPitch);
+                    this.playEntitySound(ModSounds.CAVEDWELLER_IDLE, 1.0F, randomPitch);
                     // TODO: prevent breathing from playing if playing chase sound?
                 } else if (this.isMoving() && this.isAggro) {
-                    this.playEntitySound(ModSounds.CAVEDWELLER_BREATHING, 3.0F, 1.0F);
+                    this.playEntitySound(ModSounds.CAVEDWELLER_BREATHING, 2.0F, 1.0F);
                 } else {
                     return;
                 }

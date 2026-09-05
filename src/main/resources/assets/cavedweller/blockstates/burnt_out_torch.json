@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "light=0":  { "model": "cavedweller:block/burnt_out_torch" },
+    "light=1":  { "model": "cavedweller:block/burnt_out_torch_fade" },
+    "light=2":  { "model": "cavedweller:block/burnt_out_torch_fade" },
+    "light=3":  { "model": "cavedweller:block/burnt_out_torch_fade" },
+    "light=4":  { "model": "cavedweller:block/burnt_out_torch_fade" },
+    "light=5":  { "model": "cavedweller:block/burnt_out_torch_fade" },
+    "light=6":  { "model": "cavedweller:block/burnt_out_torch_fade" },
+    "light=7":  { "model": "cavedweller:block/burnt_out_torch_fade" },
+    "light=8":  { "model": "cavedweller:block/burnt_out_torch_fade" },
+    "light=9":  { "model": "cavedweller:block/burnt_out_torch_fade" },
+    "light=10": { "model": "cavedweller:block/burnt_out_torch_fade" },
+    "light=11": { "model": "cavedweller:block/burnt_out_torch_fade" },
+    "light=12": { "model": "cavedweller:block/burnt_out_torch_fade" },
+    "light=13": { "model": "cavedweller:block/burnt_out_torch_fade" },
+    "light=14": { "model": "cavedweller:block/burnt_out_torch_fade" }
+  }
+}

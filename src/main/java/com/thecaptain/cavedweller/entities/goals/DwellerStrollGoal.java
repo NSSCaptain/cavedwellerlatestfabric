@@ -3,51 +3,35 @@ package com.thecaptain.cavedweller.entities.goals;
 import com.thecaptain.cavedweller.entities.CaveDwellerEntity;
 import com.thecaptain.cavedweller.util.Utils;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.ai.goal.WaterAvoidingRandomStrollGoal;
+import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.phys.Vec3;
 
-public class DwellerStrollGoal extends WaterAvoidingRandomStrollGoal {
+public class DwellerStrollGoal extends Goal {
     private final CaveDwellerEntity caveDweller;
 
-    public DwellerStrollGoal(CaveDwellerEntity caveDweller, double speedModifier) {
-        super(caveDweller, speedModifier);
+    public DwellerStrollGoal(CaveDwellerEntity caveDweller) {
         this.caveDweller = caveDweller;
     }
 
     @Override
     public boolean canUse() {
-        if (this.caveDweller.currentRoll != Roll.STROLL || this.caveDweller.stalking) {
-            return false;
-        } else if (!Utils.isValidPlayer(this.caveDweller.getTarget())) {
-            return false;
-        }
-
-        return super.canUse();
+        return false;
     }
 
     @Override
     public boolean canContinueToUse() {
-        if (this.caveDweller.currentRoll != Roll.STROLL || this.caveDweller.stalking) {
-            return false;
-        } else if (!Utils.isValidPlayer(this.caveDweller.getTarget())) {
-            return false;
-        }
-
-        return super.canContinueToUse();
+        return false;
     }
 
     public void tick() {
-        LivingEntity target = this.caveDweller.getTarget();
-        if (target == null) {
-            this.caveDweller.disappear();
-            return;
+        if (Utils.isValidPlayer(this.caveDweller.getTarget())) {
+            LivingEntity target = this.caveDweller.getTarget();
+            this.caveDweller.getLookControl().setLookAt(target);
         }
 
         this.caveDweller.pleaseStopMoving = true;
         this.caveDweller.getNavigation().stop();
         this.caveDweller.setDeltaMovement(Vec3.ZERO);
-
-        this.caveDweller.getLookControl().setLookAt(target);
     }
 
     public void stop() {

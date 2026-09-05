@@ -1,6 +1,8 @@
 package com.thecaptain.cavedweller.entities.goals;
 
+import com.thecaptain.cavedweller.CaveDweller;
 import com.thecaptain.cavedweller.entities.CaveDwellerEntity;
+import com.thecaptain.cavedweller.util.Utils;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.phys.Vec3;
@@ -20,8 +22,6 @@ public class DwellerHideGoal extends Goal {
             return false;
         } else if (this.caveDweller.currentRoll != Roll.HIDE) {
             return false;
-        } else if (this.caveDweller.getEntityData().get(CaveDwellerEntity.SQUEEZING_ACCESSOR)) {
-            return false;
         } else {
             return this.caveDweller.getTarget() != null;
         }
@@ -33,8 +33,13 @@ public class DwellerHideGoal extends Goal {
             return false;
         } else if (this.needsToHide) {
             return false;
-        }else {
-            return this.caveDweller.getTarget() != null;
+        } else if (!Utils.isValidPlayer(this.caveDweller.getTarget())) {
+            if (CaveDweller.CONFIG.DISAPPEAR()) {
+                this.caveDweller.disappear();
+            }
+            return false;
+        } else {
+            return true;
         }
     }
 

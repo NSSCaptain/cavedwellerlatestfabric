@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:block/template_torch",
+  "textures": {
+    "torch": "cavedweller:block/burnt_out_torch_fade"
+  }
+}

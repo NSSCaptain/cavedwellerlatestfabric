@@ -26,8 +26,7 @@ public class ModConfigModel {
     public boolean CAN_CLIMB = true; // default: true
     // Can see + attack invisible players?
     public boolean TARGET_INVISIBLE = false; // default: false
-    // Disappear if target is no longer valid?
-    // Used only once, I think
+    // Disappear if target is no longer valid
     public boolean DISAPPEAR = false; // default: false
     // Debug stuff
     @RestartRequired
@@ -45,19 +44,19 @@ public class ModConfigModel {
     // Calm timer
     @RangeConstraint(
        min = (double)120,
-       max = (double)1000
+       max = (double)1800
     )
-    public int RESET_CALM_MIN = 500; // default: 500
+    public int RESET_CALM_MIN = 600; // default: 600
     @RangeConstraint(
             min = (double)240,
-            max = (double)1000
+            max = (double)1800
     )
-    public int RESET_CALM_MAX = 600; //default: 600
+    public int RESET_CALM_MAX = 800; //default: 800
     @RangeConstraint(
             min = (double)0.0,
             max = (double)1.0
     )
-    public double RESET_CALM_COOLDOWN_CHANCE = 0.1; // default: 0.2
+    public double RESET_CALM_COOLDOWN_CHANCE = 0.2; // default: 0.2
 
     // Vanilla cave noise timer
     @RangeConstraint(
@@ -136,7 +135,7 @@ public class ModConfigModel {
             min = (double)0.1,
             max = (double)10
     )
-    public double MOVEMENT_SPEED = (double)0.32D; // default: 0.64
+    public double MOVEMENT_SPEED = (double)0.32D; // default: 0.32
     @RestartRequired
     // Attack damage (in half hearts)
     @RangeConstraint(

@@ -27,6 +27,10 @@ public class Utils {
         return secondsToTicks(minutes * 60);
     }
 
+    public static int ticksToMinutes(int ticks) {
+        return ticksToSeconds(ticks) / 60;
+    }
+
     public static String ticksToMinutesAndSeconds(int ticks) {
         if (ticks <= 0) {
             return "00m00s";

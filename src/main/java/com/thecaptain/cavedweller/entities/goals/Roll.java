@@ -4,8 +4,7 @@ public enum Roll {
     CHASE(0),
     STARE(1),
     HIDE(2),
-    STROLL(3),
-    STALK(4);
+    STALK(3);
 
     public final int rollValue;
 

@@ -62,9 +62,16 @@ public class DwellerStalkGoal extends Goal {
 
     @Override
     public boolean canContinueToUse() {
-        if (this.caveDweller.isRemoved() || this.caveDweller.isInvisible() || !Utils.isValidPlayer(this.target)) {
+        if (this.caveDweller.isRemoved() || this.caveDweller.isInvisible()) {
             return false;
         }
+        if (!Utils.isValidPlayer(target)) {
+            if (CaveDweller.CONFIG.DISAPPEAR()) {
+                this.caveDweller.disappear();
+            }
+            return false;
+        }
+
         return this.caveDweller.stalking;
     }
 

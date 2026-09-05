@@ -117,5 +117,11 @@
       "cavedweller:climb_3",
       "cavedweller:climb_4"
     ]
+  },
+  "cavedweller_wind": {
+    "subtitle": "Wind blows out torches",
+    "sounds": [
+      "cavedweller:wind"
+    ]
   }
 }

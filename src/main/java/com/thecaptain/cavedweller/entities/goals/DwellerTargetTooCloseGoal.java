@@ -1,5 +1,6 @@
 package com.thecaptain.cavedweller.entities.goals;
 
+import com.thecaptain.cavedweller.CaveDweller;
 import com.thecaptain.cavedweller.entities.CaveDwellerEntity;
 import com.thecaptain.cavedweller.util.Utils;
 import net.minecraft.world.entity.LivingEntity;
@@ -48,7 +49,14 @@ public class DwellerTargetTooCloseGoal extends NearestAttackableTargetGoal<Playe
 
     @Override
     public boolean canContinueToUse() {
-        return Utils.isValidPlayer(this.target);
+        if (!Utils.isValidPlayer(this.target)) {
+            if (CaveDweller.CONFIG.DISAPPEAR()) {
+                this.caveDweller.disappear();
+            }
+            return false;
+        } else {
+            return true;
+        }
     }
 
     @Override

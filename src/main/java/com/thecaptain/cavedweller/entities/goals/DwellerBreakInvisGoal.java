@@ -22,5 +22,4 @@ public class DwellerBreakInvisGoal extends Goal {
         this.caveDweller.noPhysics = false;
         this.caveDweller.setInvisible(false);
     }
-
 }

@@ -13,7 +13,7 @@
   "text.config.cave_dweller_config.option.DEBUG.tooltip": "SPOILERS! Enables the following:\nA scoreboard showing dweller data/timers\nSlimes with glowing spawning at every spawn attempt\nDweller has glowing applied upon spawning",
 
   "text.config.cave_dweller_config.option.CHANCE_TO_SPAWN_STALKING": "Chance to spawn stalking",
-  "text.config.cave_dweller_config.option.CHANCE_TO_SPAWN_STALKING.tooltip": "From 0% (0.0) to 100% (1.0)\nChance for it to start making it's way to you once spawned in",
+  "text.config.cave_dweller_config.option.CHANCE_TO_SPAWN_STALKING.tooltip": "From 0% (0.0) to 100% (1.0)\nChance for it to start making it's way to you once spawned in.",
 
   "text.config.cave_dweller_config.option.RESET_CALM_MIN": "Minimum calm time",
   "text.config.cave_dweller_config.option.RESET_CALM_MIN.tooltip": "(in seconds)\nMinimum time before spawning in.",

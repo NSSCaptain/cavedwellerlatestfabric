@@ -22,6 +22,7 @@ public class ModSounds {
     public static final SoundEvent CAVEDWELLER_HURT = SoundEvent.createVariableRangeEvent(new ResourceLocation("cavedweller", "cavedweller_hurt"));
     public static final SoundEvent CAVEDWELLER_DEATH = SoundEvent.createVariableRangeEvent(new ResourceLocation("cavedweller", "cavedweller_death"));
     public static final SoundEvent CAVEDWELLER_CLIMB = SoundEvent.createVariableRangeEvent(new ResourceLocation("cavedweller", "cavedweller_climb"));
+    public static final SoundEvent CAVEDWELLER_WIND = SoundEvent.createVariableRangeEvent(new ResourceLocation("cavedweller", "cavedweller_wind"));
 
     private static SoundEvent register(String name) {
         ResourceLocation id = new ResourceLocation(MOD_ID, name);
